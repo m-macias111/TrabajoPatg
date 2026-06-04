@@ -18,51 +18,7 @@ cd kilometro0
 npm install
 ```
 
-### 1.3 Variables de entorno
-
-Crea un archivo `.env` en la raíz del proyecto:
-
-```env
-PORT=3000
-
-# Base de datos (el contenedor Docker mapea 5432→5435)
-DATABASE_URL=postgres://km0_user:km0_password@localhost:5435/km0_db
-DB_HOST=localhost
-DB_PORT=5435
-DB_NAME=km0_db
-DB_USER=km0_user
-DB_PASSWORD=km0_password
-
-# Autenticación
-JWT_SECRET=tu_clave_secreta_aqui
-
-# Credenciales del administrador por defecto
-ADMIN_EMAIL=admin@admin
-ADMIN_PASS=admin
-ADMIN_CONTACT_EMAIL=admin@km0local.es
-
-# Correo (dejar vacío para usar Ethereal en modo test)
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-
-# GeoServer (interno — usado por el servidor Node.js)
-GEOSERVER_URL=http://localhost:8080/geoserver
-# GeoServer (público — usado por el navegador para WMS)
-GEOSERVER_PUBLIC_URL=http://<IP_PUBLICA>:8080/geoserver
-GEOSERVER_USER=admin
-GEOSERVER_PASS=geoserver
-GEOSERVER_WORKSPACE=km0
-# Workspace de la capa de límites provinciales
-GEOSERVER_PROVINCES_WORKSPACE=gggggggggg
-SHAPEFILE_DIR=./geoserver_shapefiles
-
-# pygeoapi
-PYGEOAPI_URL=http://localhost:5000
-```
-
-### 1.4 Levantar los servicios
+### 1.3 Levantar los servicios
 
 ```bash
 docker compose up -d          # PostGIS (5435), GeoServer (8080), pygeoapi (5000)
