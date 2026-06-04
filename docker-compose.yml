@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: km0_postgis
+    environment:
+      POSTGRES_USER: km0_user
+      POSTGRES_PASSWORD: km0_password
+      POSTGRES_DB: km0_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  geoserver:
+    image: kartoza/geoserver:2.25.0
+    container_name: km0_geoserver
+    environment:
+      GEOSERVER_ADMIN_USER: admin
+      GEOSERVER_ADMIN_PASSWORD: geoserver
+      INITIAL_MEMORY: 512m
+      MAXIMUM_MEMORY: 1g
+    ports:
+      - "8080:8080"
+    volumes:
+      - geoserver_data:/opt/geoserver/data_dir
+      - ./geoserver_shapefiles:/opt/geoserver/data_dir/shapefiles
+    depends_on:
+      - db
+
+  pygeoapi:
+    image: geopython/pygeoapi:latest
+    container_name: km0_pygeoapi
+    environment:
+      - PYGEOAPI_CONFIG=/pygeoapi/local.config.yml
+      - PYGEOAPI_OPENAPI=/pygeoapi/local.openapi.yml
+      # El proceso catastro-parcela se importa como módulo desde processes/
+      - PYTHONPATH=/pygeoapi/processes
+      # URL pública de pygeoapi para los enlaces de la UI/OpenAPI.
+      - PYGEOAPI_SERVER_URL=http://70.156.8.59:5000
+    ports:
+      - "5000:80"
+    volumes:
+      - ./pygeoapi/config.yml:/pygeoapi/local.config.yml
+      - ./pygeoapi/processes:/pygeoapi/processes
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  geoserver_data:

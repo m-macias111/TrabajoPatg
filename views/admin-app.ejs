@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <%- include('partials/head') %>
+        <title>Kilómetro 0 | Administración</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="/css/dashboard.css">
+        <link rel="stylesheet" href="/css/admin-app.css">
+</head>
+
+<body>
+    <nav class="navbar" style="position:static; background:#34495e; color:white;">
+        <div class="logo" style="color:white;">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Administración Kilómetro 0</span>
+        </div>
+        <div class="nav-links" style="display:flex; align-items:center; gap:0.75rem;">
+            <span id="userName" style="font-weight:600; color:white;"></span>
+            <button onclick="logoutAdmin()"
+                style="background:#e74c3c; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; font-size:0.9rem; display:flex; align-items:center; gap:6px; transition:0.2s;"
+                onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'"><i
+                    class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <!-- KPIs -->
+    <div class="kpi-bar" id="kpiBar">
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-producers">–</div>
+            <div class="kpi-label"><i class="fa-solid fa-tractor"></i> Productores</div>
+        </div>
+        <div class="kpi-card" style="border-top-color:#f39c12;">
+            <div class="kpi-value" id="kpi-pending" style="color:#f39c12;">–</div>
+            <div class="kpi-label"><i class="fa-solid fa-clock"></i> Pendientes aprob.</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-clients">–</div>
+            <div class="kpi-label"><i class="fa-solid fa-users"></i> Clientes</div>
+        </div>
+        <div class="kpi-card" style="border-top-color:#2ecc71;">
+            <div class="kpi-value" id="kpi-today" style="color:#2ecc71;">–</div>
+            <div class="kpi-label"><i class="fa-solid fa-receipt"></i> Pedidos hoy</div>
+        </div>
+        <div class="kpi-card" style="border-top-color:#1a7a3a;">
+            <div class="kpi-value" id="kpi-revenue" style="color:#1a7a3a; font-size:1.5rem;">–</div>
+            <div class="kpi-label"><i class="fa-solid fa-euro-sign"></i> Ingresos totales</div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="menu-bar">
+            <div class="menu-item active" onclick="switchTab('tab-producers')"><i class="fa-solid fa-users"></i> Gestor
+                Productores</div>
+            <div class="menu-item" onclick="switchTab('tab-clients')"><i class="fa-solid fa-user"></i> Gestor Clientes
+            </div>
+            <div class="menu-item" onclick="switchTab('tab-orders')"><i class="fa-solid fa-receipt"></i> Logs de
+                Transacciones</div>
+            
+            <div style="margin-top:auto; font-size:0.75rem; color:rgba(0,0,0,0.4); text-align:center; padding-top:2rem;">
+                &copy; 2026 Kilómetro 0
+            </div>
+        </div>
+
+        <div class="content-area">
+
+            <!-- tab de productores -->
+            <div id="tab-producers" class="content-panel active">
+                <h2 style="margin-bottom:1.2rem;">Validación de Productores</h2>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="search-input" placeholder="Buscar por nombre, email, localidad..."
+                        oninput="filterList('tab-producers', this.value)">
+                </div>
+                <div class="list-group" id="list-tab-producers">
+                    <% producers.forEach(function(p) { %>
+                        <div class="list-item" style="align-items:flex-start;"
+                            data-search="<%= (p.name + ' ' + (p.lastName||'') + ' ' + p.email + ' ' + (p.locality||'')).toLowerCase() %>">
+                            <div style="display:flex; gap:1rem;">
+                                <% if(p.profileImage) { %>
+                                    <img src="<%= p.profileImage %>"
+                                        style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #eee; flex-shrink:0;">
+                                    <% } else { %>
+                                        <div
+                                            style="width:60px; height:60px; border-radius:50%; background:#ddd; display:flex; align-items:center; justify-content:center; color:gray; flex-shrink:0;">
+                                            <i class="fa-solid fa-tractor"></i></div>
+                                        <% } %>
+                                            <div>
+                                                <h4 style="margin:0 0 5px 0;">
+                                                    <%= p.name %>
+                                                        <%= p.lastName || '' %> <span
+                                                                style="font-size:0.9rem; color:gray; font-weight:normal;">(
+                                                                <%= p.email %>)</span>
+                                                </h4>
+                                                <p style="margin:0; font-size:0.9rem; color:gray;"><i
+                                                        class="fa-solid fa-location-dot"></i>
+                                                    <%= p.locality %> | <i class="fa-solid fa-phone"></i>
+                                                        <%= p.phone %>
+                                                </p>
+                                                <% if(p.history) { %>
+                                                    <p style="font-size:0.85rem; margin-top:5px; color:#555;"><i>"<%=
+                                                                p.history.substring(0,120) %>
+                                                                <%= p.history.length> 120 ? '...' : '' %>"</i></p>
+                                                    <% } %>
+                                                        <% if(!p.verified) { %>
+                                                            <div
+                                                                style="margin-top:10px; background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;">
+                                                                <p style="margin:0 0 5px 0; font-size:0.85rem;">
+                                                                    <strong>DNI:</strong>
+                                                                    <%= p.dni %>
+                                                                </p>
+                                                                <p style="margin:0; font-size:0.85rem;"><strong>Ref.
+                                                                        Catastral:</strong>
+                                                                    <%= p.catastral %>
+                                                                </p>
+                                                                <div id="catastro-info-<%= p.id %>"
+                                                                    style="margin-top:8px; font-size:0.85rem; color:gray;">
+                                                                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando
+                                                                    datos catastrales...</div>
+                                                                <div id="map-container-<%= p.id %>"
+                                                                    style="width:100%; height:250px; margin-top:8px; border-radius:8px; display:none; border:2px solid #ddd; position:relative; z-index:1;">
+                                                                </div>
+                                                            </div>
+                                                            <% } %>
+                                            </div>
+                            </div>
+                            <div
+                                style="text-align:right; display:flex; flex-direction:column; gap:0.5rem; align-items:flex-end; flex-shrink:0;">
+                                <div>
+                                    <% if(p.verified) { %>
+                                        <span class="badge badge-success"><i class="fa-solid fa-check"></i>
+                                            Verificado</span>
+                                        <% } else { %>
+                                            <span class="badge badge-warning" id="badge-<%= p.id %>"><i
+                                                    class="fa-solid fa-clock"></i> Pendiente</span>
+                                            <% } %>
+                                </div>
+                                <div
+                                    style="display:flex; gap:0.5rem; margin-top:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                                    <button class="btn btn-outline" style="padding:0.3rem 0.8rem; font-size:0.8rem;"
+                                        onclick="window.open('/producer-profile?id=<%= p.id %>&from=admin', '_blank')">Ver
+                                        Perfil</button>
+                                    <% if(!p.verified) { %>
+                                        <button class="btn btn-primary" id="btn-<%= p.id %>"
+                                            style="padding:0.3rem 0.8rem; background:#34495e; border:none; font-size:0.8rem;"
+                                            onclick="verifyProducer(<%= p.id %>)">Aprobar</button>
+                                        <% } %>
+                                            <% if(p.profileImage) { %>
+                                                <button class="btn btn-outline"
+                                                    style="padding:0.3rem 0.8rem; font-size:0.8rem;"
+                                                    onclick="removePhoto(<%= p.id %>)">Borrar Foto</button>
+                                                <% } %>
+                                                    <% if(p.isBlocked) { %>
+                                                        <button class="btn btn-outline"
+                                                            style="padding:0.3rem 0.8rem; font-size:0.8rem; color:green; border-color:green;"
+                                                            onclick="toggleBlock('producer', <%= p.id %>, false)">Desbloquear</button>
+                                                        <% } else { %>
+                                                            <button class="btn btn-block"
+                                                                style="padding:0.3rem 0.8rem; font-size:0.8rem;"
+                                                                onclick="toggleBlock('producer', <%= p.id %>, true)">Bloquear</button>
+                                                            <% } %>
+                                </div>
+                            </div>
+                        </div>
+                        <% }); %>
+                            <% if(producers.length===0) { %>
+                                <p style="color:gray;">No hay productores en el sistema.</p>
+                                <% } %>
+                </div>
+                <p class="no-results" id="no-results-tab-producers">No se encontraron productores con ese criterio.</p>
+            </div>
+
+            <!-- tab de clientes -->
+            <div id="tab-clients" class="content-panel">
+                <h2 style="margin-bottom:1.2rem;">Perfiles de Clientes</h2>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="search-input" placeholder="Buscar por nombre o email..."
+                        oninput="filterList('tab-clients', this.value)">
+                </div>
+                <div class="list-group" id="list-tab-clients">
+                    <% clients.forEach(function(c) { %>
+                        <div class="list-item"
+                            data-search="<%= (c.name + ' ' + (c.lastName||'') + ' ' + c.email).toLowerCase() %>">
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <div
+                                    style="width:44px; height:44px; border-radius:50%; background:#34495e; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                                    <%= c.name.charAt(0).toUpperCase() %>
+                                </div>
+                                <div>
+                                    <h4 style="margin:0 0 3px 0;">
+                                        <%= c.name %>
+                                            <%= c.lastName || '' %>
+                                    </h4>
+                                    <p style="margin:0; font-size:0.85rem; color:gray;"><i
+                                            class="fa-solid fa-envelope"></i>
+                                        <%= c.email %>
+                                    </p>
+                                    <% if(c.created_at) { %>
+                                        <p style="margin:2px 0 0; font-size:0.8rem; color:#bbb;">Registrado: <%= new
+                                                Date(c.created_at).toLocaleDateString('es-ES') %>
+                                        </p>
+                                        <% } %>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; align-items:center; flex-shrink:0;">
+                                <button class="btn btn-outline" style="padding:0.3rem 0.8rem; font-size:0.8rem;"
+                                    onclick="openClientModal(<%= c.id %>)"><i class="fa-solid fa-eye"></i> Ver
+                                    Perfil</button>
+                                <% if(c.isBlocked) { %>
+                                    <button class="btn btn-outline"
+                                        style="padding:0.3rem 0.8rem; font-size:0.8rem; color:green; border-color:green;"
+                                        onclick="toggleBlock('client', <%= c.id %>, false)">Desbloquear</button>
+                                    <% } else { %>
+                                        <button class="btn btn-outline"
+                                            style="padding:0.3rem 0.8rem; font-size:0.8rem; color:red; border-color:red;"
+                                            onclick="toggleBlock('client', <%= c.id %>, true)">Bloquear</button>
+                                        <% } %>
+                            </div>
+                        </div>
+                        <% }); %>
+                            <% if(clients.length===0) { %>
+                                <p style="color:gray;">No hay clientes registrados en el sistema.</p>
+                                <% } %>
+                </div>
+                <p class="no-results" id="no-results-tab-clients">No se encontraron clientes con ese criterio.</p>
+            </div>
+
+            <!-- tab de pedidos -->
+            <div id="tab-orders" class="content-panel">
+                <h2 style="margin-bottom:1.2rem;">Monitor Global de Reservas</h2>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="search-input" placeholder="Buscar por código QR, email, estado..."
+                        oninput="filterList('tab-orders', this.value)">
+                </div>
+                <div class="list-group" id="list-tab-orders">
+                    <% orders.forEach(function(o) { %>
+                        <div class="list-item order-clickable"
+                            data-search="<%= (o.qr_code + ' ' + (o.client_email||'') + ' ' + o.status).toLowerCase() %>"
+                            onclick="openOrderModal(<%= o.order_id %>)">
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;">
+                                    <h4 style="margin:0;"><i class="fa-solid fa-qrcode"></i>
+                                        <%= o.qr_code %>
+                                    </h4>
+                                    <span class="status-pill status-<%= o.status %>">
+                                        <%= o.status==='PENDING' ? 'Pendiente' : o.status==='COMPLETED' ? 'Completado'
+                                            : 'Cancelado' %>
+                                    </span>
+                                </div>
+                                <p style="margin:4px 0 0; font-size:0.85rem; color:gray;"><i
+                                        class="fa-solid fa-envelope"></i>
+                                    <%= o.client_email %>
+                                </p>
+                                <p style="margin:2px 0 0; font-size:0.8rem; color:#bbb;"><i
+                                        class="fa-solid fa-calendar"></i>
+                                    <%= new Date(o.created_at).toLocaleDateString('es-ES',
+                                        {day:'2-digit',month:'2-digit',year:'numeric'}) %> · <%= o.items.length %>
+                                            artículo(s)
+                                </p>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0; margin-left:1rem;">
+                                <strong style="font-size:1.2rem; color:var(--primary);">
+                                    <%= o.total_price.toFixed(2) %>€
+                                </strong><br>
+                                <% if(o.status !=='CANCELLED' ) { %>
+                                    <button class="btn btn-outline"
+                                        style="padding:0.3rem 0.8rem; font-size:0.75rem; color:red; border-color:red; margin-top:6px;"
+                                        onclick="event.stopPropagation(); cancelOrder('<%= o.order_id %>')">Cancelar</button>
+                                    <% } %>
+                            </div>
+                        </div>
+                        <% }); %>
+                            <% if(orders.length===0) { %>
+                                <p style="color:gray;">Aún no se ha realizado ninguna transacción en la plataforma.</p>
+                                <% } %>
+                </div>
+                <p class="no-results" id="no-results-tab-orders">No se encontraron transacciones con ese criterio.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- modal pa ver el pedido entero -->
+    <div id="orderModal" class="modal-overlay" style="display:none;" onclick="closeModal('orderModal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('orderModal')">×</button>
+            <div id="orderModalContent">
+                <div style="text-align:center;padding:2rem;color:gray;"><i class="fa-solid fa-spinner fa-spin"></i>
+                    Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- modal pa cotillear al cliente -->
+    <div id="clientModal" class="modal-overlay" style="display:none;" onclick="closeModal('clientModal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('clientModal')">×</button>
+            <div id="clientModalContent">
+                <div style="text-align:center;padding:2rem;color:gray;"><i class="fa-solid fa-spinner fa-spin"></i>
+                    Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Datos serializados por el servidor e incrustados en la página.
+        const ordersData = <%- JSON.stringify(orders) %>;
+        const producersData = <%- JSON.stringify(producers) %>;
+        const producerMaps = {}; // Registro de mapas por productor: { id: { map, marker } }.
+
+        const userStr = localStorage.getItem('km0_user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user.role !== 'admin') window.location.href = '/';
+            document.getElementById('userName').innerText = "Hola, " + user.name;
+        } else {
+            window.location.href = '/login';
+        }
+
+        fetch('/api/admin/kpis')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                document.getElementById('kpi-producers').innerText = data.totalProducers;
+                document.getElementById('kpi-pending').innerText = data.pendingProducers;
+                document.getElementById('kpi-clients').innerText = data.totalClients;
+                document.getElementById('kpi-today').innerText = data.ordersToday;
+                document.getElementById('kpi-revenue').innerText = data.totalRevenue.toFixed(0) + '€';
+            }).catch(() => { });
+
+        // Cierra la sesión del administrador y regresa a la página principal.
+        function logoutAdmin() {
+            fetch('/api/logout', { method: 'POST' }).then(() => {
+                localStorage.removeItem('km0_user');
+                window.location.href = '/';
+            });
+        }
+
+        // Conmuta entre las pestañas del panel sin recargar la página,
+        // sincronizando el estado con el historial del navegador.
+        function switchTab(tabId, updateHistory = true) {
+            document.querySelectorAll('.content-panel').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            const panel = document.getElementById(tabId);
+            if (panel) panel.classList.add('active');
+            const menuItem = document.querySelector(`[onclick*="switchTab('${tabId}')"]`);
+            if (menuItem) menuItem.classList.add('active');
+            if (updateHistory) history.pushState({ tab: tabId }, '', '#' + tabId);
+        }
+
+        window.addEventListener('popstate', (event) => {
+            const tab = (event.state && event.state.tab) || window.location.hash.substring(1) || 'tab-producers';
+            if (document.getElementById(tab)) switchTab(tab, false);
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash && document.getElementById(hash)) switchTab(hash, false);
+            else history.replaceState({ tab: 'tab-producers' }, '', '#tab-producers');
+
+            // Inicializa los mapas catastrales de los productores pendientes.
+            initCatastroMaps();
+        });
+
+        // Para cada productor pendiente con referencia catastral, consulta sus
+        // coordenadas y renderiza un mapa con un marcador arrastrable, de modo
+        // que el administrador pueda ajustar la ubicación exacta de la granja.
+        async function initCatastroMaps() {
+            const pending = producersData.filter(p => !p.verified && p.catastral);
+            for (const p of pending) {
+                try {
+                    const res = await fetch('/api/admin/catastro-coords/' + p.catastral);
+                    const data = await res.json();
+                    const infoDiv = document.getElementById('catastro-info-' + p.id);
+                    const mapDiv = document.getElementById('map-container-' + p.id);
+
+                    if (!data.success) {
+                        infoDiv.innerHTML = `<span style="color:#e74c3c;"><i class="fa-solid fa-triangle-exclamation"></i> Error catastral: ${data.error}</span>`;
+                        continue;
+                    }
+
+                    infoDiv.innerHTML = `<span style="color:#2ecc71;"><i class="fa-solid fa-map-pin"></i> ${data.address}</span>`;
+                    if (data.isForal) {
+                        infoDiv.innerHTML += `<br><span style="color:#f39c12; font-size:0.75rem;"><i class="fa-solid fa-circle-info"></i> Régimen Foral: Mueve el marcador a la posición exacta de la granja.</span>`;
+                    }
+
+                    mapDiv.style.display = 'block';
+
+                    // Inicialización del mapa Leaflet centrado en las coordenadas
+                    // catastrales (con menor zoom en territorios forales, por ser
+                    // una localización aproximada).
+                    const map = L.map('map-container-' + p.id).setView([data.lat, data.lng], data.isForal ? 13 : 18);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+
+                    const marker = L.marker([data.lat, data.lng], {
+                        draggable: true,
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                        })
+                    }).addTo(map);
+
+                    producerMaps[p.id] = { map, marker };
+
+                    // Fuerza el recálculo de dimensiones una vez el contenedor es
+                    // visible, evitando que el mapa se renderice con tamaño incorrecto.
+                    setTimeout(() => map.invalidateSize(), 800);
+                } catch (e) {
+                    const infoDiv = document.getElementById('catastro-info-' + p.id);
+                    if (infoDiv) infoDiv.innerHTML = `<span style="color:#e74c3c;"><i class="fa-solid fa-triangle-exclamation"></i> Error al cargar mapa</span>`;
+                }
+            }
+        }
+
+        // Filtra en cliente los elementos de una lista según el texto buscado y
+        // muestra un aviso cuando no hay coincidencias.
+        function filterList(tabId, query) {
+            const list = document.getElementById('list-' + tabId);
+            const noResults = document.getElementById('no-results-' + tabId);
+            const q = query.toLowerCase().trim();
+            let visible = 0;
+            list.querySelectorAll('.list-item').forEach(item => {
+                const match = !q || (item.dataset.search || item.textContent.toLowerCase()).includes(q);
+                item.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = (q && visible === 0) ? 'block' : 'none';
+        }
+
+        // Oculta la ventana modal indicada.
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Traduce el código de estado del pedido a una etiqueta legible en español.
+        function statusLabel(s) {
+            return s === 'PENDING' ? 'Pendiente' : s === 'COMPLETED' ? 'Completado' : 'Cancelado';
+        }
+
+        // Formatea una fecha al formato local español (día, mes, año y hora).
+        function fmtDate(d) {
+            return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Abre el modal de detalle de un pedido con su desglose de artículos.
+        function openOrderModal(orderId) {
+            const o = ordersData.find(x => x.order_id === orderId);
+            if (!o) return;
+            document.getElementById('orderModal').style.display = 'flex';
+
+            const items = (o.items || []).filter(i => i && i.name);
+            const itemsRows = items.map(i => {
+                const qty = i.qty || 1;
+                const price = parseFloat(i.price) || 0;
+                return `<tr>
+                    <td>${i.name}</td>
+                    <td style="text-align:center;">${qty}</td>
+                    <td style="text-align:right;">${price.toFixed(2)}€</td>
+                    <td style="text-align:right; font-weight:600;">${(price * qty).toFixed(2)}€</td>
+                </tr>`;
+            }).join('');
+
+            const rejectionHtml = o.rejection_reason
+                ? `<div style="background:#fde8e8; padding:0.8rem 1rem; border-radius:8px; border-left:3px solid #e74c3c; margin-top:0.8rem; font-size:0.9rem;">
+                    <strong style="color:#c0392b;">Motivo de rechazo:</strong> ${o.rejection_reason}
+                   </div>` : '';
+
+            document.getElementById('orderModalContent').innerHTML = `
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+                    <div>
+                        <h2 style="margin:0; font-size:1.3rem;"><i class="fa-solid fa-qrcode"></i> ${o.qr_code}</h2>
+                        <p style="margin:4px 0 0; color:gray; font-size:0.85rem;">Pedido #${o.order_id}</p>
+                    </div>
+                    <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
+                </div>
+
+                <div class="modal-section">
+                    <h4><i class="fa-solid fa-info-circle"></i> Información</h4>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.9rem;">
+                        <div><span style="color:gray;">Cliente:</span><br><strong>${o.client_email || '–'}</strong></div>
+                        <div><span style="color:gray;">Fecha:</span><br><strong>${fmtDate(o.created_at)}</strong></div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h4><i class="fa-solid fa-box"></i> Artículos</h4>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align:center;">Uds.</th>
+                                <th style="text-align:right;">P. unit.</th>
+                                <th style="text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemsRows || '<tr><td colspan="4" style="color:gray;padding:0.5rem 0;">Sin artículos</td></tr>'}</tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; padding-top:0.8rem; border-top:2px solid #eee; margin-top:0.5rem;">
+                    <span style="font-size:1.3rem; font-weight:800; color:var(--primary);">Total: ${parseFloat(o.total_price).toFixed(2)}€</span>
+                </div>
+                ${rejectionHtml}
+                ${o.status !== 'CANCELLED' ? `<div style="text-align:right; margin-top:1rem;">
+                    <button class="btn btn-outline" style="color:red; border-color:red; font-size:0.85rem;" onclick="cancelOrder('${o.order_id}')">Cancelar pedido</button>
+                </div>` : ''}
+            `;
+        }
+
+        // Abre el modal con la ficha de un cliente, cargando de forma asíncrona
+        // su perfil, sus estadísticas (pedidos y gasto) y su historial.
+        function openClientModal(clientId) {
+            document.getElementById('clientModal').style.display = 'flex';
+            document.getElementById('clientModalContent').innerHTML = '<div style="text-align:center;padding:2rem;color:gray;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
+
+            fetch('/api/admin/client/' + clientId)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) { document.getElementById('clientModalContent').innerHTML = '<p style="color:red;text-align:center;">Error cargando el perfil.</p>'; return; }
+                    const c = data.client;
+                    const orders = data.orders || [];
+                    const completedOrders = orders.filter(o => o.status === 'COMPLETED');
+                    const totalSpent = completedOrders.reduce((s, o) => s + parseFloat(o.total_price), 0);
+
+                    const avatarHtml = c.profileImage
+                        ? `<img src="${c.profileImage}" class="client-avatar">`
+                        : `<div class="client-avatar-placeholder">${c.name.charAt(0).toUpperCase()}</div>`;
+
+                    const ordersHtml = orders.length === 0
+                        ? '<p style="color:gray;font-size:0.9rem;">Sin pedidos registrados.</p>'
+                        : orders.map(o => `
+                        <div class="mini-order-row">
+                            <div>
+                                <span style="font-size:0.85rem; font-weight:600;">${o.qr_code}</span><br>
+                                <span style="font-size:0.78rem; color:gray;">${fmtDate(o.created_at)}</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="status-pill status-${o.status}" style="font-size:0.72rem;">${statusLabel(o.status)}</span><br>
+                                <strong style="font-size:0.9rem;">${parseFloat(o.total_price).toFixed(2)}€</strong>
+                            </div>
+                        </div>`).join('');
+
+                    document.getElementById('clientModalContent').innerHTML = `
+                    <div style="display:flex; align-items:center; gap:1.2rem; margin-bottom:1.5rem;">
+                        ${avatarHtml}
+                        <div>
+                            <h2 style="margin:0 0 4px;">${c.name} ${c.lastName || ''}</h2>
+                            <p style="margin:0; color:gray; font-size:0.9rem;"><i class="fa-solid fa-envelope"></i> ${c.email}</p>
+                            ${c.created_at ? `<p style="margin:3px 0 0; font-size:0.8rem; color:#bbb;">Registrado: ${new Date(c.created_at).toLocaleDateString('es-ES')}</p>` : ''}
+                            ${c.isBlocked ? '<span class="badge badge-danger" style="margin-top:5px; display:inline-block;">Bloqueado</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.8rem; margin-bottom:1.5rem; text-align:center;">
+                        <div style="background:#f9f9f9; padding:0.8rem; border-radius:10px;">
+                            <div style="font-size:1.5rem; font-weight:800; color:#34495e;">${orders.length}</div>
+                            <div style="font-size:0.75rem; color:gray;">Pedidos totales</div>
+                        </div>
+                        <div style="background:#f9f9f9; padding:0.8rem; border-radius:10px;">
+                            <div style="font-size:1.5rem; font-weight:800; color:#2ecc71;">${completedOrders.length}</div>
+                            <div style="font-size:0.75rem; color:gray;">Completados</div>
+                        </div>
+                        <div style="background:#f9f9f9; padding:0.8rem; border-radius:10px;">
+                            <div style="font-size:1.3rem; font-weight:800; color:#1a7a3a;">${totalSpent.toFixed(2)}€</div>
+                            <div style="font-size:0.75rem; color:gray;">Gasto total</div>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h4><i class="fa-solid fa-receipt"></i> Historial de Pedidos</h4>
+                        <div style="max-height:220px; overflow-y:auto;">${ordersHtml}</div>
+                    </div>
+                `;
+                })
+                .catch(() => { document.getElementById('clientModalContent').innerHTML = '<p style="color:red;text-align:center;">Error de conexión.</p>'; });
+        }
+
+        // Verifica a un productor. Si se ha cargado su mapa, envía además la
+        // posición final del marcador como ubicación oficial de la granja, y
+        // actualiza la interfaz reflejando el nuevo estado.
+        function verifyProducer(id) {
+            if (!confirm('¿Estás seguro de verificar la veracidad de los documentos de este productor?')) return;
+
+            const payload = {};
+            if (producerMaps[id]) {
+                const pos = producerMaps[id].marker.getLatLng();
+                payload.lat = pos.lat;
+                payload.lng = pos.lng;
+            }
+
+            fetch('/api/producers/' + id + '/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('badge-' + id).className = 'badge badge-success';
+                        document.getElementById('badge-' + id).innerHTML = '<i class="fa-solid fa-check"></i> Verificado';
+                        document.getElementById('btn-' + id).style.display = 'none';
+                        if (document.getElementById('map-container-' + id)) {
+                            document.getElementById('map-container-' + id).style.opacity = '0.5';
+                            if (producerMaps[id]) producerMaps[id].marker.dragging.disable();
+                        }
+                    }
+                });
+        }
+
+        // Bloquea o desbloquea una cuenta (productor o cliente) previa
+        // confirmación.
+        function toggleBlock(type, id, block) {
+            if (!confirm(`¿Estás seguro de ${block ? 'bloquear' : 'desbloquear'} a este ${type}?`)) return;
+            fetch('/api/admin/block', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, id, block })
+            }).then(() => window.location.reload());
+        }
+
+        // Elimina la foto de perfil de un productor como medida de moderación.
+        function removePhoto(id) {
+            if (!confirm('¿Estás seguro de eliminar la foto de perfil de este productor por ser inapropiada?')) return;
+            fetch('/api/admin/remove-photo', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(() => window.location.reload());
+        }
+
+        // Cancela un pedido por decisión administrativa, previa confirmación.
+        function cancelOrder(order_id) {
+            if (!confirm('¿Estás seguro de cancelar esta transacción?')) return;
+            fetch('/api/admin/cancel-order', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id })
+            }).then(() => window.location.reload());
+        }
+    </script>
+    <%- include('partials/footer') %>
+</body>
+
+</html>

@@ -1,0 +1,65 @@
+/* Estilos específicos de producer-app.ejs */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: rgba(46, 204, 113, 0.05);
+    border: 1px solid rgba(46, 204, 113, 0.2);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+    margin: 0;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.product-row {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: center;
+    transition: 0.3s;
+    background: white;
+}
+
+.product-row:hover {
+    border-color: var(--primary);
+}
+
+.profile-preview {
+    background: #f8f9fa;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.order-row {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+    background: white;
+    transition: 0.3s;
+}
+
+.order-row:hover {
+    border-color: var(--primary);
+}

@@ -1,0 +1,59 @@
+# =============================================================================
+# Configuración de pygeoapi para Kilómetro 0
+# Expone el proceso OGC API - Processes "catastro-parcela", que dada una
+# referencia catastral devuelve la geometría de la parcela en GeoJSON.
+# =============================================================================
+server:
+    bind:
+        host: 0.0.0.0
+        port: 80
+    # URL pública con la que la UI/OpenAPI construye los enlaces. Debe coincidir
+    # con el host desde el que se accede (p. ej. la IP pública de la VM), no con
+    # localhost, o el navegador no podrá cargar /openapi. Configurable por env.
+    url: ${PYGEOAPI_SERVER_URL}
+    mimetype: application/json; charset=UTF-8
+    encoding: utf-8
+    languages:
+        - en-US
+        - es-ES
+    cors: true
+    pretty_print: true
+    limits:
+        default_items: 10
+        max_items: 50
+    map:
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+
+logging:
+    level: INFO
+
+metadata:
+    identification:
+        title:
+            en: Kilómetro 0 - Servicios geoespaciales
+            es: Kilómetro 0 - Servicios geoespaciales
+        description:
+            en: Geospatial processes for the Kilómetro 0 local food platform.
+            es: Procesos geoespaciales de la plataforma de venta local Kilómetro 0.
+        keywords:
+            en: [km0, catastro, parcela, inspire]
+            es: [km0, catastro, parcela, inspire]
+        keywords_type: theme
+        terms_of_service: https://creativecommons.org/licenses/by/4.0/
+        url: http://localhost:5000
+    license:
+        name: CC-BY 4.0 license
+        url: https://creativecommons.org/licenses/by/4.0/
+    provider:
+        name: Kilómetro 0
+        url: http://localhost:3000
+    contact:
+        name: Kilómetro 0
+        email: admin@km0local.es
+
+resources:
+    catastro-parcela:
+        type: process
+        processor:
+            name: catastro_parcela.CatastroParcelaProcessor

@@ -1,0 +1,24 @@
+nohup: ignoring input
+Email en modo TEST (Ethereal). Configura SMTP_HOST en .env para correos reales.
+node:events:502
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+    at listenInCluster (node:net:1965:12)
+    at Server.listen (node:net:2067:7)
+    at Function.listen (/home/azureuser/kilometro0/node_modules/express/lib/application.js:635:24)
+    at /home/azureuser/kilometro0/server/server.js:41:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1944:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v20.20.2

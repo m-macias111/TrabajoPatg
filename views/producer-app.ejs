@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <%- include('partials/head') %>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>Kilómetro 0 | Panel de Productor</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/producer-app.css">
+</head>
+<body>
+    <nav class="navbar" style="position:static; background:linear-gradient(90deg, #1a7a3a, #145a2b);">
+        <div class="logo" style="color:white;">
+            <i class="fa-solid fa-tractor" style="color:#8fff8f;"></i>
+            <span style="color:white;">Portal Productor</span>
+        </div>
+        <div class="nav-links" style="display:flex; align-items:center; gap:0.75rem;">
+            <div onclick="switchTab('tab-profile')" title="Mi perfil" style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; padding:0.4rem 0.8rem; border-radius:30px; background:rgba(255,255,255,0.15); transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                <% if(producer.profileImage) { %>
+                    <img src="<%= producer.profileImage %>" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.6); flex-shrink:0;">
+                <% } else { %>
+                    <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fa-solid fa-tractor" style="font-size:0.85rem; color:white;"></i></div>
+                <% } %>
+                <span style="font-weight:600; color:white; font-size:0.9rem;"><%= producer.name %></span>
+            </div>
+            <button onclick="doLogout()" style="background:#e74c3c; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; font-size:0.9rem; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <% if(!producer.verified) { %>
+        <div class="dashboard-container">
+            <div style="grid-column: 1 / -1; background:white; padding: 5rem 2rem; border-radius:16px; text-align:center; box-shadow:var(--shadow-sm);">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 5rem; color:#f39c12; margin-bottom:1.5rem;"></i>
+                <h1 style="color:#333; margin-bottom:1rem; font-family:'Outfit';">Cuenta en Revisión</h1>
+                <p style="color:gray; font-size:1.1rem; max-width:650px; margin:0 auto; line-height:1.6;">
+                    Hemos recibido correctamente tu solicitud de alta en <b>Kilómetro 0</b>. <br><br>
+                    Un <b>Administrador</b> evaluará tu Referencia Catastral y tus credenciales en las próximas 24/48 horas.<br><br>
+                    Recarga esta página más adelante. Una vez aprobada, tendrás acceso integral a tu catálogo.
+                </p>
+                <div style="margin-top:2rem;">
+                    <a href="mailto:<%= adminEmail %>?subject=Consulta%20sobre%20mi%20alta%20en%20Kilometro%200" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-envelope"></i> Contactar con el Administrador
+                    </a>
+                </div>
+            </div>
+        </div>
+    <% } else { %>
+    <div class="dashboard-container">
+        <div class="menu-bar">
+            <div style="text-align:center; margin-bottom:1rem;">
+                <% if(producer.profileImage) { %>
+                    <img src="<%= producer.profileImage %>" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.3);">
+                <% } else { %>
+                    <div style="width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:2rem; color:white;"><i class="fa-solid fa-tractor"></i></div>
+                <% } %>
+                <p style="color:rgba(255,255,255,0.7); font-size:0.85rem; margin-top:8px;"><%= producer.locality %></p>
+            </div>
+            <div class="menu-item active" onclick="switchTab('tab-products')"><i class="fa-solid fa-boxes-stacked"></i> Mis Packs</div>
+            <div class="menu-item" onclick="switchTab('tab-profile')"><i class="fa-solid fa-image"></i> Perfil de Granja</div>
+            <div class="menu-item" onclick="switchTab('tab-orders')"><i class="fa-solid fa-receipt"></i> Mis Pedidos</div>
+            <div class="menu-item" onclick="switchTab('tab-scan')"><i class="fa-solid fa-qrcode"></i> Escanear Recogida</div>
+            
+            <div style="margin-top:auto; font-size:0.75rem; color:rgba(255,255,255,0.5); text-align:center; padding-top:2rem;">
+                &copy; 2026 Kilómetro 0
+            </div>
+            <div class="menu-item" onclick="window.location.href='/'" style="margin-top:2rem;"><i class="fa-solid fa-arrow-left"></i> Ver Tienda</div>
+        </div>
+
+        <div class="content-area">
+            <!-- TAB: Products -->
+            <div id="tab-products" class="content-panel active">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:1rem; margin-bottom:1.5rem;">
+                    <h2>Mis Packs de Productos</h2>
+                    <button class="btn btn-primary" onclick="openAddProductModal()">+ Crear Pack</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3><%= stats.totalSales %></h3><p>Ventas</p></div>
+                    <div class="stat-card"><h3><%= stats.totalRevenue.toFixed(0) %>€</h3><p>Ingresos</p></div>
+                    <div class="stat-card"><h3><%= stats.pendingOrders %></h3><p>Pendientes</p></div>
+                </div>
+                <div id="productsList">
+                    <% products.forEach(function(p) { %>
+                        <div class="product-row" id="product-row-<%= p.id %>">
+                            <div style="position:relative; flex-shrink:0;">
+                                <img id="product-img-<%= p.id %>" src="<%= p.image_url %>" style="width:70px; height:70px; border-radius:8px; object-fit:cover; display:block;" alt="">
+                                <button onclick="editPackImage(<%= p.id %>)" title="Cambiar foto" style="position:absolute; bottom:-6px; right:-6px; width:26px; height:26px; border-radius:50%; border:2px solid white; background:var(--primary); color:white; cursor:pointer; font-size:0.7rem; display:flex; align-items:center; justify-content:center; padding:0;">
+                                    <i class="fa-solid fa-camera"></i>
+                                </button>
+                            </div>
+                            <div style="flex:1;">
+                                <h4 style="margin:0;"><%= p.name %></h4>
+                                <p style="margin:0;color:gray; font-size:0.85rem;"><%= p.category %> · <%= p.kg %>kg · <%= p.pickup_day %></p>
+                                <% if(p.stock !== null && p.stock !== undefined) { %>
+                                    <span style="font-size:0.78rem; padding:2px 7px; border-radius:12px; background:<%= p.stock <= 0 ? '#fee2e2' : p.stock <= 5 ? '#fff3cd' : '#d1fae5' %>; color:<%= p.stock <= 0 ? '#991b1b' : p.stock <= 5 ? '#856404' : '#065f46' %>; font-weight:700;">
+                                        <%= p.stock <= 0 ? 'Agotado' : 'Stock: ' + p.stock %>
+                                    </span>
+                                <% } %>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <div style="font-weight:bold; color:var(--primary); font-size: 1.2rem;"><%= p.price.toFixed(2) %>€</div>
+                                <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="openStockModal(<%= p.id %>, <%= p.stock !== null && p.stock !== undefined ? p.stock : -1 %>)" title="Gestionar stock"><i class="fa-solid fa-layer-group"></i></button>
+                                <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem; color:red; border-color:red;" onclick="deleteProduct(<%= p.id %>, '<%= p.name.replace(/'/g, "\\'") %>')"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    <% }); %>
+                    <% if(products.length === 0) { %>
+                        <p style="color:gray; text-align:center; padding:3rem;">No has creado ningún pack todavía. ¡Pulsa "Crear Pack" para empezar!</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- TAB: Profile -->
+            <div id="tab-profile" class="content-panel">
+                <h2>Perfil de Granja / Productor</h2>
+                <p style="color:gray; margin-bottom:1.5rem;">Estos datos se mostrarán a los clientes cuando vean tu perfil.</p>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-tractor" style="color:var(--primary);"></i> Nombre de la granja / explotación</label>
+                    <input type="text" id="editName" value="<%= producer.name || '' %>" placeholder="Ej: Huerta del Jarama" oninput="updatePreview()" required>
+                </div>
+                <div class="form-group">
+                    <label>Dirección / Localidad</label>
+                    <input type="text" id="editLocality" value="<%= producer.locality || '' %>" placeholder="Ej: Ctra. M-501 km 12, Pelayos de la Presa" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-map-pin" style="color:var(--primary);"></i> Ubicación en el mapa</label>
+                    <div id="locationPickerMap" style="height:280px; border-radius:12px; border:1px solid #ddd; margin-bottom:0.5rem;"></div>
+                    <small style="color:gray; display:block;"><i class="fa-solid fa-circle-info"></i> La ubicación la fija el administrador a partir de tu referencia catastral. Si necesitas cambiarla, contacta con soporte.</small>
+                </div>
+                <div class="form-group">
+                    <label>Elige tu Foto de Perfil</label>
+                    <div style="display:flex; gap:0.8rem; margin-bottom:1rem; flex-wrap:wrap;">
+                        <% const avatars = ['avatar_apple_1780078871676.png', 'avatar_barn_1780078838567.png', 'avatar_carrot_1780078885502.png', 'avatar_cow_1780078897770.png', 'avatar_farmer_hat_1780078860028.png', 'avatar_tractor_1780078821751.png']; %>
+                        <% avatars.forEach(av => { %>
+                            <img src="/img/avatars/<%= av %>" style="width:50px; height:50px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='transparent'" onclick="selectDefaultAvatar('/img/avatars/<%= av %>', 'profileMsg')">
+                        <% }); %>
+                    </div>
+                    <label style="color:gray; font-size:0.85rem; display:block; margin-bottom:0.5rem;">O sube la tuya propia desde el ordenador:</label>
+                    <input type="file" id="editProfileImageFile" accept="image/*" onchange="uploadProfileImage(this, 'profileMsg')">
+                </div>
+                <div class="form-group">
+                    <label>Historia de la Granja</label>
+                    <textarea id="editHistory" style="height:120px; resize:vertical;" placeholder="Cuéntale a tus clientes quién eres..." oninput="updatePreview()"><%= producer.history || '' %></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="saveProfile()"><i class="fa-solid fa-floppy-disk"></i> Guardar Perfil</button>
+                <span id="profileMsg" style="margin-left:1rem; color:var(--primary); font-weight:600; display:none;">¡Guardado!</span>
+
+                <!-- Preview -->
+                <div class="profile-preview">
+                    <h4 style="margin:0 0 1rem; color:var(--text-light);"><i class="fa-solid fa-eye"></i> Vista previa del perfil público</h4>
+                    <div style="display:flex; gap:1.2rem; align-items:flex-start;">
+                        <div id="previewImg" style="width:70px; height:70px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; border:2px solid #eee;">
+                            <% if(producer.profileImage) { %>
+                                <img src="<%= producer.profileImage %>" style="width:100%; height:100%; object-fit:cover;">
+                            <% } else { %>
+                                <i class="fa-solid fa-tractor" style="color:white; font-size:1.5rem;"></i>
+                            <% } %>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 style="margin:0 0 4px;"><span id="previewName"><%= producer.name %></span> <%= producer.lastName || '' %></h3>
+                            <p style="margin:0 0 4px; font-size:0.9rem; color:gray;" id="previewLocality"><i class="fa-solid fa-location-dot" style="color:var(--primary);"></i> <%= producer.locality || '–' %></p>
+                            <p style="margin:0; font-size:0.85rem; color:#555; font-style:italic;" id="previewHistory"><%= producer.history || 'Sin descripción' %></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Orders -->
+            <div id="tab-orders" class="content-panel">
+                <h2 style="margin-bottom:1.5rem;">Pedidos Recibidos</h2>
+                <% if(orders.length === 0) { %>
+                    <p style="color:gray; text-align:center; padding:3rem;">Aún no has recibido pedidos.</p>
+                <% } else { %>
+                    <% orders.forEach(function(o) { %>
+                        <div class="order-row" id="order-row-<%= o.order_id %>">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div style="flex:1;">
+                                    <h4 style="margin:0 0 3px;"><i class="fa-solid fa-qrcode" style="color:var(--primary);"></i> <%= o.qr_code %></h4>
+                                    <p style="margin:0; color:gray; font-size:0.85rem;"><i class="fa-solid fa-user"></i> <%= o.client_email %> · <%= o.items.length %> artículo(s)</p>
+                                    <% if(o.items && o.items.length > 0) { %>
+                                        <ul style="margin:6px 0 0; padding-left:1rem; font-size:0.82rem; color:#555;">
+                                            <% o.items.forEach(function(item) { %>
+                                                <li><%= item.name %></li>
+                                            <% }); %>
+                                        </ul>
+                                    <% } %>
+                                </div>
+                                <div style="text-align:right; flex-shrink:0; margin-left:1rem;">
+                                    <span style="font-weight:bold; font-size:1.1rem; color:var(--primary);"><%= o.total_price.toFixed(2) %>€</span><br>
+                                    <span style="font-size:0.8rem; padding:2px 8px; border-radius:12px; background:<%= o.status === 'CANCELLED' ? '#fee2e2' : o.status === 'COMPLETED' ? '#d1fae5' : '#fff3cd' %>; color:<%= o.status === 'CANCELLED' ? '#991b1b' : o.status === 'COMPLETED' ? '#065f46' : '#856404' %>; font-weight:700;"><%= o.status === 'PENDING' ? 'Pendiente' : o.status === 'COMPLETED' ? 'Completado' : 'Cancelado' %></span>
+                                    <% if(o.status === 'PENDING') { %>
+                                        <div style="margin-top:8px;">
+                                            <button class="btn btn-outline" style="padding:0.3rem 0.7rem; font-size:0.78rem; color:#e74c3c; border-color:#e74c3c;" onclick="openRejectModal(<%= o.order_id %>)"><i class="fa-solid fa-ban"></i> Rechazar</button>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                <% } %>
+            </div>
+
+            <!-- TAB: QR Scan -->
+            <div id="tab-scan" class="content-panel">
+                <h2 style="margin-bottom:0.5rem;">Verificar Recogida</h2>
+                <p style="color:gray; margin-bottom:1.5rem;">Escanea el QR del cliente con la cámara o introdúcelo manualmente.</p>
+
+                <div style="background:#f9f9f9; border-radius:16px; padding:1.5rem; border:1px solid #eee; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h4 style="margin:0;"><i class="fa-solid fa-camera" style="color:var(--primary);"></i> Escáner de Cámara</h4>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button id="btnStartScan" class="btn btn-primary" onclick="startScanner()" style="padding:0.4rem 0.9rem; font-size:0.85rem;"><i class="fa-solid fa-play"></i> Iniciar</button>
+                            <button id="btnStopScan" class="btn btn-outline" onclick="stopScanner()" style="padding:0.4rem 0.9rem; font-size:0.85rem; display:none;"><i class="fa-solid fa-stop"></i> Detener</button>
+                        </div>
+                    </div>
+                    <div id="qr-reader" style="border-radius:12px; overflow:hidden; display:none;"></div>
+                    <p id="scannerHint" style="color:gray; font-size:0.85rem; margin:0; text-align:center;"><i class="fa-solid fa-circle-info"></i> Pulsa "Iniciar" y apunta la cámara al código QR del cliente.</p>
+                </div>
+
+                <div style="background:#f9f9f9; border-radius:16px; padding:1.5rem; border:1px solid #eee;">
+                    <h4 style="margin:0 0 1rem;"><i class="fa-solid fa-keyboard" style="color:var(--primary);"></i> Introducción Manual</h4>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="scanInput" placeholder="QR_1234567890..." style="flex:1;">
+                        <button class="btn btn-primary" onclick="verifyScan(document.getElementById('scanInput').value.trim())"><i class="fa-solid fa-check"></i> Verificar</button>
+                    </div>
+                </div>
+
+                <div id="scanResult" style="margin-top:1.5rem;"></div>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <!-- Modal: Add Product -->
+    <div class="modal-overlay" id="addProductModal">
+        <div class="modal-box">
+            <h2 style="margin-bottom:1.5rem;"><i class="fa-solid fa-plus-circle" style="color:var(--primary);"></i> Crear Nuevo Pack</h2>
+            <div class="form-group"><label>Nombre del producto</label><input type="text" id="newName" placeholder="Ej: Tomates Rosa 5kg"></div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1"><label>Categoría</label>
+                    <select id="newCategory"><option>Verduras</option><option>Frutas</option><option>Carnes</option><option>Lácteos</option><option>Miel</option><option>Bebidas</option><option>Otros</option></select>
+                </div>
+                <div class="form-group" style="flex:1"><label>Precio (€)</label><input type="number" id="newPrice" step="0.5" min="0.5" placeholder="12.50"></div>
+            </div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1"><label>Peso (kg)</label><input type="number" id="newKg" step="0.1" min="0.1" value="1" placeholder="5"></div>
+                <div class="form-group" style="flex:1"><label>Día de Recogida</label>
+                    <select id="newPickup">
+                        <option value="Lunes">Lunes</option>
+                        <option value="Martes">Martes</option>
+                        <option value="Miércoles">Miércoles</option>
+                        <option value="Jueves">Jueves</option>
+                        <option value="Viernes">Viernes</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                        <option value="Lunes y Jueves">Lunes y Jueves</option>
+                        <option value="Martes y Viernes">Martes y Viernes</option>
+                        <option value="Fines de semana">Fines de semana</option>
+                        <option value="Siempre disponible">Siempre disponible</option>
+                        <option value="Consultar" selected>Consultar</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Foto del pack</label>
+                <div style="display:flex; gap:1rem; align-items:flex-start;">
+                    <div id="newImagePreview" style="width:90px; height:90px; border-radius:10px; background:#f0f0f0; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#bbb; overflow:hidden; border:1px solid #e0e0e0;">
+                        <i class="fa-solid fa-image" style="font-size:1.6rem;"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <input type="file" id="newImageFile" accept="image/*" onchange="handleNewPackImage(this)" style="margin-bottom:0.5rem;">
+                        <label style="color:gray; font-size:0.8rem; display:block; margin-bottom:0.3rem;">O pega una URL de imagen:</label>
+                        <input type="text" id="newImage" placeholder="https://images.unsplash.com/..." oninput="previewNewPackUrl(this.value)">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Stock inicial <span style="font-weight:400; color:gray;">(opcional)</span></label>
+                <input type="number" id="newStock" min="0" placeholder="Sin límite">
+            </div>
+            <div style="display:flex; gap:1rem; justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeAddProductModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="submitNewProduct()"><i class="fa-solid fa-check"></i> Crear Pack</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Reject Order -->
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal-box" style="max-width:420px; text-align:left;">
+            <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-ban" style="color:#e74c3c;"></i> Rechazar Pedido</h3>
+            <p style="color:gray; font-size:0.9rem; margin-bottom:1rem;">El cliente recibirá una notificación con el motivo. El pedido quedará cancelado.</p>
+            <input type="hidden" id="rejectOrderId">
+            <div class="form-group">
+                <label>Motivo del rechazo</label>
+                <textarea id="rejectReason" style="height:90px; resize:vertical;" placeholder="Ej: Producto agotado, no disponible esta semana..."></textarea>
+            </div>
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeRejectModal()">Cancelar</button>
+                <button class="btn" style="background:#e74c3c; color:white; border:none;" onclick="submitReject()"><i class="fa-solid fa-ban"></i> Rechazar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input oculto para cambiar la foto de un pack existente -->
+    <input type="file" id="editPackImageInput" accept="image/*" style="display:none;" onchange="submitPackImage(this)">
+
+    <!-- Modal: Stock -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal-box" style="max-width:400px; text-align:left;">
+            <h3 style="margin-bottom:1rem;"><i class="fa-solid fa-layer-group" style="color:var(--primary);"></i> Gestionar Stock</h3>
+            <input type="hidden" id="stockProductId">
+
+            <div id="stockCurrentBox" style="background:#f8f9fa; border:1px solid #e8e8e8; border-radius:10px; padding:0.8rem 1rem; margin-bottom:1.2rem; text-align:center;">
+                <span style="font-size:0.8rem; color:gray;">Stock actual</span>
+                <div id="stockCurrentLabel" style="font-size:1.4rem; font-weight:800; color:var(--primary);">–</div>
+            </div>
+
+            <!-- Añadir packs (acción principal) -->
+            <div class="form-group">
+                <label><i class="fa-solid fa-plus" style="color:var(--primary);"></i> Añadir packs al stock</label>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="number" id="stockAddValue" min="1" placeholder="Ej: 50" style="flex:1;">
+                    <button class="btn btn-primary" onclick="addStock()" style="white-space:nowrap;"><i class="fa-solid fa-plus"></i> Añadir</button>
+                </div>
+                <div style="display:flex; gap:0.4rem; margin-top:0.5rem; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-outline" style="padding:0.25rem 0.7rem; font-size:0.8rem;" onclick="quickAdd(10)">+10</button>
+                    <button type="button" class="btn btn-outline" style="padding:0.25rem 0.7rem; font-size:0.8rem;" onclick="quickAdd(25)">+25</button>
+                    <button type="button" class="btn btn-outline" style="padding:0.25rem 0.7rem; font-size:0.8rem;" onclick="quickAdd(50)">+50</button>
+                    <button type="button" class="btn btn-outline" style="padding:0.25rem 0.7rem; font-size:0.8rem;" onclick="quickAdd(100)">+100</button>
+                </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid #eee; margin:1.2rem 0;">
+
+            <!-- Fijar valor exacto (avanzado) -->
+            <div class="form-group" style="margin-bottom:0.5rem;">
+                <label style="font-size:0.9rem; color:#555;">O fijar stock exacto <span style="font-weight:400; color:gray;">(vacío = sin límite)</span></label>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="number" id="stockValue" min="0" placeholder="Sin límite" style="flex:1;">
+                    <button class="btn btn-outline" onclick="submitStock()" style="white-space:nowrap;">Fijar</button>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:1.2rem;">
+                <button class="btn btn-outline" onclick="closeStockModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cierra la sesión y regresa a la página principal.
+        function doLogout() {
+            fetch('/api/logout', { method: 'POST' }).then(() => {
+                localStorage.removeItem('km0_user');
+                window.location.href = '/';
+            });
+        }
+
+        // Conmuta entre las pestañas del panel sin recargar la página,
+        // actualizando el historial del navegador. Al entrar en el perfil
+        // inicializa el mapa de ubicación y, fuera de la pestaña de escaneo,
+        // detiene la cámara para liberar el dispositivo.
+        function switchTab(tabId, updateHistory = true) {
+            document.querySelectorAll('.content-panel').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            const panel = document.getElementById(tabId);
+            if (panel) panel.classList.add('active');
+            const menuItem = document.querySelector(`[onclick*="switchTab('${tabId}')"]`);
+            if (menuItem) menuItem.classList.add('active');
+            if (updateHistory) history.pushState({ tab: tabId }, '', '#' + tabId);
+            if (tabId === 'tab-profile') {
+                setTimeout(() => { initLocationMap(); if (locationMap) locationMap.invalidateSize(); }, 150);
+            }
+            if (tabId !== 'tab-scan') stopScanner();
+        }
+
+        window.addEventListener('popstate', (event) => {
+            const tab = (event.state && event.state.tab) || window.location.hash.substring(1) || 'tab-products';
+            if (document.getElementById(tab)) switchTab(tab, false);
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash && document.getElementById(hash)) switchTab(hash, false);
+            else history.replaceState({ tab: 'tab-products' }, '', '#tab-products');
+        });
+
+        // Refleja en tiempo real los cambios del formulario de perfil en la
+        // tarjeta de vista previa.
+        function updatePreview() {
+            const name = document.getElementById('editName').value.trim();
+            const locality = document.getElementById('editLocality').value.trim();
+            const history = document.getElementById('editHistory').value.trim();
+            document.getElementById('previewName').innerText = name || 'Tu granja';
+            document.getElementById('previewLocality').innerHTML = `<i class="fa-solid fa-location-dot" style="color:var(--primary);"></i> ${locality || '–'}`;
+            document.getElementById('previewHistory').innerText = history || 'Sin descripción';
+        }
+
+        // Valida y envía al servidor los datos editados del perfil. Exige un
+        // nombre de granja no vacío y mantiene sincronizado dicho nombre en el
+        // almacenamiento local para que la barra de navegación lo refleje.
+        function saveProfile() {
+            const name = document.getElementById('editName').value.trim();
+            if (!name) {
+                const msg = document.getElementById('profileMsg');
+                msg.innerText = 'El nombre de la granja no puede estar vacío';
+                msg.style.color = '#e74c3c';
+                msg.style.display = 'inline';
+                document.getElementById('editName').focus();
+                return;
+            }
+            fetch('/api/producers/update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    locality: document.getElementById('editLocality').value,
+                    history: document.getElementById('editHistory').value
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    // Sincroniza el nombre almacenado localmente con el recién guardado.
+                    try {
+                        const u = JSON.parse(localStorage.getItem('km0_user') || '{}');
+                        if (u && data.name) { u.name = data.name; localStorage.setItem('km0_user', JSON.stringify(u)); }
+                    } catch (e) {}
+                    const msg = document.getElementById('profileMsg');
+                    msg.innerText = '¡Guardado!';
+                    msg.style.color = 'var(--primary)';
+                    msg.style.display = 'inline';
+                    setTimeout(() => msg.style.display = 'none', 3000);
+                }
+            });
+        }
+
+        // Lee la imagen seleccionada, la codifica en Base64 mediante FileReader y
+        // la envía al servidor para actualizar la foto de perfil.
+        function uploadProfileImage(input, msgId) {
+            const file = input.files[0];
+            if (!file) return;
+            const msg = document.getElementById(msgId);
+            msg.innerText = 'Subiendo...';
+            msg.style.display = 'inline-block';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                fetch('/api/user/profile-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64 })
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        msg.innerText = '¡Foto actualizada!';
+                        msg.style.color = 'var(--primary)';
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        msg.innerText = 'Error: ' + data.message;
+                        msg.style.color = 'red';
+                    }
+                }).catch(() => {
+                    msg.innerText = 'Error de conexión';
+                    msg.style.color = 'red';
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Asigna como foto de perfil uno de los avatares predeterminados,
+        // enviando su URL al servidor.
+        function selectDefaultAvatar(url, msgId) {
+            const msg = document.getElementById(msgId);
+            msg.innerText = 'Guardando...';
+            msg.style.display = 'inline-block';
+            fetch('/api/user/profile-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: url })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    msg.innerText = '¡Foto actualizada!';
+                    msg.style.color = 'var(--primary)';
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    msg.innerText = 'Error: ' + data.message;
+                    msg.style.color = 'red';
+                }
+            });
+        }
+
+        // Redimensiona la imagen a un ancho máximo mediante un canvas y la
+        // recodifica en JPEG con compresión, reduciendo su tamaño antes de
+        // enviarla para no superar el límite de carga útil de la petición.
+        function compressImage(file, maxWidth = 900, quality = 0.82) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const scale = Math.min(1, maxWidth / img.width);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        let uploadedPackImage = null; // Imagen en Base64 subida al crear un producto.
+
+        // Abre el modal de alta de producto, reiniciando sus campos y la vista previa.
+        function openAddProductModal() {
+            uploadedPackImage = null;
+            document.getElementById('newImageFile').value = '';
+            document.getElementById('newImage').value = '';
+            document.getElementById('newImagePreview').innerHTML = '<i class="fa-solid fa-image" style="font-size:1.6rem;"></i>';
+            document.getElementById('addProductModal').classList.add('open');
+        }
+        function closeAddProductModal() { document.getElementById('addProductModal').classList.remove('open'); }
+
+        function setNewPackPreview(src) {
+            document.getElementById('newImagePreview').innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+
+        async function handleNewPackImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+                uploadedPackImage = await compressImage(file);
+                document.getElementById('newImage').value = ''; // El archivo subido prevalece sobre la URL.
+                setNewPackPreview(uploadedPackImage);
+            } catch (e) { alert('No se pudo procesar la imagen.'); }
+        }
+
+        function previewNewPackUrl(url) {
+            if (url) { uploadedPackImage = null; document.getElementById('newImageFile').value = ''; setNewPackPreview(url); }
+        }
+
+        // Recoge los datos del formulario de alta y crea el producto en el
+        // servidor. La imagen subida tiene prioridad sobre la URL introducida.
+        function submitNewProduct() {
+            const name = document.getElementById('newName').value;
+            const price = document.getElementById('newPrice').value;
+            if (!name || !price) return alert('Nombre y precio son obligatorios');
+            const stockVal = document.getElementById('newStock').value;
+            const image_url = uploadedPackImage || document.getElementById('newImage').value || '';
+            fetch('/api/products/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    category: document.getElementById('newCategory').value,
+                    price: parseFloat(price),
+                    kg: parseFloat(document.getElementById('newKg').value) || 1,
+                    pickup_day: document.getElementById('newPickup').value,
+                    image_url,
+                    stock: stockVal !== '' ? parseInt(stockVal) : null
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) { closeAddProductModal(); window.location.reload(); }
+                else alert(data.message || 'No se pudo crear el pack.');
+            });
+        }
+
+        let editingPackId = null;
+        // Inicia el cambio de imagen de un producto existente abriendo el
+        // selector de archivos asociado.
+        function editPackImage(id) {
+            editingPackId = id;
+            const input = document.getElementById('editPackImageInput');
+            input.value = '';
+            input.click();
+        }
+        async function submitPackImage(input) {
+            const file = input.files[0];
+            if (!file || !editingPackId) return;
+            let image;
+            try { image = await compressImage(file); }
+            catch (e) { return alert('No se pudo procesar la imagen.'); }
+            fetch('/api/products/' + editingPackId + '/image', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const img = document.getElementById('product-img-' + editingPackId);
+                    if (img) img.src = image; // Refleja el cambio sin recargar la página.
+                } else {
+                    alert(data.message || 'No se pudo actualizar la foto.');
+                }
+            }).catch(() => alert('Error de conexión.'));
+        }
+
+        // Elimina un producto del catálogo previa confirmación del usuario y
+        // retira su fila de la tabla.
+        function deleteProduct(id, name) {
+            if (!confirm(`¿Estás seguro de eliminar el producto "${name}"?`)) return;
+            fetch('/api/products/' + id, { method: 'DELETE' })
+            .then(r => r.json()).then(data => {
+                if (data.success) document.getElementById('product-row-' + id).remove();
+            });
+        }
+
+        // Abre el modal de gestión de stock mostrando las existencias actuales
+        // (o «sin límite» cuando el stock es nulo).
+        function openStockModal(id, current) {
+            document.getElementById('stockProductId').value = id;
+            const label = document.getElementById('stockCurrentLabel');
+            if (current >= 0) {
+                label.innerText = current + ' uds.' + (current <= 0 ? ' (Agotado)' : '');
+                label.style.color = current <= 0 ? '#e74c3c' : 'var(--primary)';
+            } else {
+                label.innerText = 'Sin límite';
+                label.style.color = '#888';
+            }
+            document.getElementById('stockValue').value = current >= 0 ? current : '';
+            document.getElementById('stockAddValue').value = '';
+            document.getElementById('stockModal').classList.add('open');
+        }
+        function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
+        function quickAdd(n) { document.getElementById('stockAddValue').value = n; }
+
+        // Incrementa el stock en la cantidad indicada. La suma se realiza de
+        // forma atómica en el servidor para evitar condiciones de carrera.
+        function addStock() {
+            const id = document.getElementById('stockProductId').value;
+            const add = parseInt(document.getElementById('stockAddValue').value);
+            if (!Number.isInteger(add) || add <= 0) return alert('Introduce cuántos packs quieres añadir.');
+            fetch('/api/products/' + id + '/stock/add', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ add })
+            }).then(r => r.json()).then(data => {
+                if (data.success) { closeStockModal(); window.location.reload(); }
+                else alert(data.message || 'No se pudo añadir el stock.');
+            });
+        }
+
+        // Fija el stock a un valor absoluto, sobrescribiendo el existente. Un
+        // campo vacío establece disponibilidad ilimitada (stock nulo).
+        function submitStock() {
+            const id = document.getElementById('stockProductId').value;
+            const stock = document.getElementById('stockValue').value;
+            fetch('/api/products/' + id + '/stock', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stock: stock !== '' ? parseInt(stock) : null })
+            }).then(r => r.json()).then(data => {
+                if (data.success) { closeStockModal(); window.location.reload(); }
+                else alert(data.message || 'No se pudo fijar el stock.');
+            });
+        }
+
+        // Abre el modal para rechazar un pedido, donde el productor puede indicar
+        // el motivo.
+        function openRejectModal(orderId) {
+            document.getElementById('rejectOrderId').value = orderId;
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('rejectModal').classList.add('open');
+        }
+        function closeRejectModal() { document.getElementById('rejectModal').classList.remove('open'); }
+        // Envía al servidor el rechazo del pedido junto con el motivo indicado.
+        function submitReject() {
+            const id = document.getElementById('rejectOrderId').value;
+            const reason = document.getElementById('rejectReason').value.trim() || 'Rechazado por el productor';
+            fetch('/api/orders/' + id + '/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            }).then(r => r.json()).then(data => {
+                if (data.success) { closeRejectModal(); window.location.reload(); }
+                else alert(data.message || 'No se pudo rechazar el pedido.');
+            });
+        }
+
+        let html5QrScanner = null;
+
+        // Inicia el lector de códigos QR mediante la cámara trasera del
+        // dispositivo. Ante un fallo de acceso, sugiere la introducción manual.
+        function startScanner() {
+            document.getElementById('qr-reader').style.display = 'block';
+            document.getElementById('btnStartScan').style.display = 'none';
+            document.getElementById('btnStopScan').style.display = 'inline-flex';
+            document.getElementById('scannerHint').style.display = 'none';
+            document.getElementById('scanResult').innerHTML = '';
+
+            html5QrScanner = new Html5Qrcode('qr-reader');
+            html5QrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 260, height: 260 } },
+                (decodedText) => {
+                    stopScanner();
+                    verifyScan(decodedText);
+                },
+                () => {}
+            ).catch(() => {
+                stopScanner();
+                document.getElementById('scanResult').innerHTML =
+                    '<p style="color:red;"><i class="fa-solid fa-triangle-exclamation"></i> No se pudo acceder a la cámara. Usa la introducción manual.</p>';
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrScanner) {
+                html5QrScanner.stop().catch(() => {}).finally(() => {
+                    html5QrScanner = null;
+                    const reader = document.getElementById('qr-reader');
+                    if (reader) { reader.style.display = 'none'; reader.innerHTML = ''; }
+                    const btnStart = document.getElementById('btnStartScan');
+                    const btnStop = document.getElementById('btnStopScan');
+                    const hint = document.getElementById('scannerHint');
+                    if (btnStart) btnStart.style.display = 'inline-flex';
+                    if (btnStop) btnStop.style.display = 'none';
+                    if (hint) hint.style.display = 'block';
+                });
+            }
+        }
+
+        // Procesa el contenido leído del QR. Si es un JSON con la estructura del
+        // justificante, extrae la referencia y los datos para mostrarlos;
+        // después valida la recogida contra el servidor y presenta el resultado.
+        function verifyScan(rawCode) {
+            if (!rawCode) return;
+            const resultEl = document.getElementById('scanResult');
+            resultEl.innerHTML = '<p style="color:gray;"><i class="fa-solid fa-spinner fa-spin"></i> Verificando...</p>';
+
+            let ref = rawCode;
+            let parsedInfo = null;
+            try {
+                const parsed = JSON.parse(rawCode);
+                if (parsed.ref) { ref = parsed.ref; parsedInfo = parsed; }
+            } catch (e) { /* El contenido no es JSON: se trata como referencia en texto plano. */ }
+
+            fetch('/api/orders/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_code: ref })
+            }).then(r => r.json()).then(data => {
+                const infoHtml = parsedInfo ? `
+                    <div style="text-align:left; background:white; border-radius:10px; padding:1rem; margin-top:1rem; border:1px solid #e0e0e0; font-size:0.88rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                            <span style="color:gray;"><i class="fa-solid fa-hashtag"></i> Referencia</span>
+                            <span style="font-weight:700; font-family:monospace;">${parsedInfo.ref}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                            <span style="color:gray;"><i class="fa-solid fa-user"></i> Cliente</span>
+                            <span style="font-weight:600;">${parsedInfo.cliente}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.8rem;">
+                            <span style="color:gray;"><i class="fa-solid fa-calendar"></i> Fecha</span>
+                            <span>${parsedInfo.fecha}</span>
+                        </div>
+                        <div style="border-top:1px solid #eee; padding-top:0.7rem;">
+                            <p style="margin:0 0 0.4rem; font-weight:600;"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> Artículos</p>
+                            ${(parsedInfo.articulos || []).map(a =>
+                                `<div style="display:flex; justify-content:space-between; padding:0.25rem 0; border-bottom:1px dashed #f0f0f0;">
+                                    <span>${a.nombre}${a.qty > 1 ? ` × ${a.qty}` : ''} <span style="color:gray; font-size:0.8rem;">· ${a.productor}</span></span>
+                                    <span style="font-weight:700; color:var(--primary);">${a.precio}€</span>
+                                </div>`
+                            ).join('')}
+                            <div style="display:flex; justify-content:space-between; padding-top:0.5rem;">
+                                <span style="font-weight:700;">Total</span>
+                                <span style="font-weight:800; color:var(--primary);">${parsedInfo.total}€</span>
+                            </div>
+                        </div>
+                    </div>` : `<p style="color:gray; margin-top:0.5rem; font-size:0.85rem;">Referencia: <b>${ref}</b></p>`;
+
+                if (data.success) {
+                    resultEl.innerHTML = `
+                        <div style="padding:1.5rem; border-radius:12px; background:#f0fff0; border:1px solid #2ecc71; text-align:center;">
+                            <i class="fa-solid fa-circle-check" style="font-size:2.5rem; color:var(--primary); margin-bottom:0.5rem;"></i>
+                            <h3 style="color:var(--primary); margin:0.3rem 0;">¡Recogida verificada!</h3>
+                            <p style="color:gray; margin:0;">Pedido marcado como completado.</p>
+                        </div>
+                        ${infoHtml}
+                        <button class="btn btn-outline" style="width:100%; margin-top:1rem;" onclick="document.getElementById('scanResult').innerHTML=''; document.getElementById('scanInput').value='';">
+                            <i class="fa-solid fa-rotate-left"></i> Escanear otro
+                        </button>`;
+                    document.getElementById('scanInput').value = '';
+                } else {
+                    const alreadyDone = data.alreadyDone;
+                    resultEl.innerHTML = `
+                        <div style="padding:1.5rem; border-radius:12px; background:#fff5f5; border:1px solid #e74c3c; text-align:center;">
+                            <i class="fa-solid fa-circle-xmark" style="font-size:2.5rem; color:#e74c3c; margin-bottom:0.5rem;"></i>
+                            <h3 style="color:#e74c3c; margin:0.3rem 0;">${alreadyDone ? 'Ya procesado' : 'No encontrado'}</h3>
+                            <p style="color:gray; margin:0;">${data.message || 'El código no corresponde a ningún pedido pendiente.'}</p>
+                        </div>
+                        ${infoHtml}
+                        <button class="btn btn-outline" style="width:100%; margin-top:1rem;" onclick="startScanner()">
+                            <i class="fa-solid fa-camera"></i> Escanear otro QR
+                        </button>`;
+                }
+            }).catch(() => {
+                resultEl.innerHTML = '<p style="color:red;">Error al conectar con el servidor.</p>';
+            });
+        }
+
+        let locationMap = null, locationMarker = null;
+
+        // Inicializa el mapa que muestra la ubicación del productor. Se centra en
+        // sus coordenadas si existen o, en su defecto, en una vista general.
+        function initLocationMap() {
+            if (locationMap) return;
+            const initLat = parseFloat('<%= producer.lat %>') || 40.4168;
+            const initLng = parseFloat('<%= producer.lng %>') || -3.7038;
+            const hasLocation = !isNaN(parseFloat('<%= producer.lat %>'));
+
+            locationMap = L.map('locationPickerMap').setView([initLat, initLng], hasLocation ? 13 : 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+            }).addTo(locationMap);
+
+            if (hasLocation) {
+                locationMarker = L.marker([initLat, initLng]).addTo(locationMap);
+            }
+
+            // El mapa es de solo lectura. El administrador fija la ubicación basándose en la Ref. Catastral.
+        }
+
+        if (window.location.hash === '#tab-profile') {
+            window.addEventListener('DOMContentLoaded', () => setTimeout(initLocationMap, 200));
+        }
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <%- include('partials/footer') %>
+</body>
+</html>

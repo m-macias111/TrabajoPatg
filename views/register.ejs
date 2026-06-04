@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <%- include('partials/head') %>
+        <title>Kilómetro 0 | Registro</title>
+        <link rel="stylesheet" href="/css/auth.css">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="logo">
+            <i class="fa-solid fa-leaf" style="color:var(--primary);"></i>
+            <span style="font-family:'Outfit'; font-weight:800; color:var(--primary);">Kilómetro 0</span>
+        </div>
+        <h2 style="margin-bottom: 0.5rem;">Crea tu cuenta</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">Únete a nuestra comunidad local</p>
+
+        <div class="role-selector">
+            <div class="role-card <%= role === 'client' ? 'active' : '' %>" onclick="selectRole('client')"
+                id="card-client">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <div style="font-weight:bold;">Cliente</div>
+            </div>
+            <div class="role-card <%= role === 'producer' ? 'active' : '' %>" onclick="selectRole('producer')"
+                id="card-producer">
+                <i class="fa-solid fa-tractor"></i>
+                <div style="font-weight:bold;">Productor</div>
+            </div>
+        </div>
+
+        <form id="registerForm" onsubmit="handleRegister(event)">
+            <input type="hidden" id="role" value="<%= role %>">
+
+            <div class="form-group" id="farmNameGroup" style="display:<%= role === 'producer' ? 'block' : 'none' %>;">
+                <label><i class="fa-solid fa-tractor" style="color:var(--primary);"></i> Nombre de la granja /
+                    explotación</label>
+                <input type="text" id="farmName" placeholder="Ej: Huerta del Jarama" value="">
+            </div>
+            <div class="form-group" style="display:flex; gap:1rem;">
+                <div style="flex:1">
+                    <label id="nameLabel">
+                        <%= role==='producer' ? 'Nombre del titular' : 'Nombre' %>
+                    </label>
+                    <input type="text" id="name" required
+                        placeholder="<%= role === 'producer' ? 'Ej: María' : 'Tu nombre' %>">
+                </div>
+                <div style="flex:1" id="lastNameContainer">
+                    <label id="lastNameLabel">
+                        <%= role==='producer' ? 'Apellidos del titular' : 'Apellidos' %>
+                    </label>
+                    <input type="text" id="lastName" placeholder="Tus apellidos">
+                </div>
+            </div>
+            <div class="form-group" style="display:flex; gap:1rem;">
+                <div style="flex:1">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="email" required placeholder="tu@email.com"
+                        pattern="^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$">
+                </div>
+                <div style="flex:1">
+                    <label>Repetir Correo</label>
+                    <input type="email" id="confirmEmail" required placeholder="tu@email.com">
+                </div>
+            </div>
+            <small id="emailError" style="color:red; display:none; margin-top:-1rem; margin-bottom:1rem;">El formato de
+                email es inválido o los correos no coinciden.</small>
+            <div class="form-group" style="display:flex; gap:1rem;">
+                <div style="flex:1">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+                <div style="flex:1">
+                    <label>Repetir Contraseña</label>
+                    <input type="password" id="confirmPassword" required placeholder="••••••••">
+                </div>
+            </div>
+            <small id="passwordError" style="color:red; display:none; margin-top:-1rem; margin-bottom:1rem;">Las
+                contraseñas no coinciden.</small>
+
+            <div id="producer-fields"
+                style="display:<%= role === 'producer' ? 'block' : 'none' %>; background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #eee;">
+                <h4 style="margin-bottom:1rem; color:var(--primary);"><i class="fa-solid fa-circle-check"></i>
+                    Verificación de Productor</h4>
+                <div class="form-group">
+                    <label>Tipo y Número de Identificación</label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <select id="idType" style="width: 120px;">
+                            <option value="DNI">DNI</option>
+                            <option value="NIE">NIE</option>
+                            <option value="CIF">CIF</option>
+                        </select>
+                        <input type="text" id="dni" placeholder="12345678A" style="text-transform: uppercase;">
+                    </div>
+                    <small id="dniError" style="color:red; display:none; margin-top:0.5rem;">El formato no coincide con
+                        el tipo seleccionado.</small>
+                </div>
+                <div class="form-group">
+                    <label>Referencia Catastral</label>
+                    <input type="text" id="catastral" placeholder="XXXXX..." style="text-transform: uppercase;">
+                    <small id="catastralError" style="color:red; display:none; margin-top:0.5rem;"></small>
+                </div>
+                <div class="form-group">
+                    <label>Dirección (Carretera y km / Calle y número)</label>
+                    <input type="text" id="address" placeholder="Ej: Ctra. M-501 km 12">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono de Contacto</label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <select id="phonePrefix" style="width: 100px;">
+                            <option value="+34">🇪🇸 +34</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+351">🇵🇹 +351</option>
+                        </select>
+                        <input type="tel" id="phone" placeholder="600000000" pattern="\d{9}">
+                    </div>
+                    <small id="phoneError" style="color:red; display:none; margin-top:0.5rem;">Debe contener exactamente
+                        9 dígitos.</small>
+                </div>
+                <p style="font-size: 0.8rem; color: gray;">Un administrador verificará tu ubicación y documentos antes
+                    de habilitar tu tienda local.</p>
+            </div>
+
+            <button class="btn btn-primary" type="submit" style="width: 100%;">Registrarme</button>
+        </form>
+
+        <p style="margin-top: 2rem; color: var(--text-light);">
+            ¿Ya tienes cuenta? <a href="/login" style="color: var(--primary); font-weight: bold;">Inicia Sesión</a>
+        </p>
+        <p style="margin-top: 1rem;">
+            <a href="/" style="font-size:0.9rem; color:gray;"><i class="fa-solid fa-arrow-left"></i> Volver a inicio</a>
+        </p>
+    </div>
+
+    <script>
+        // Ajusta el formulario al rol seleccionado, mostrando los campos
+        // adicionales propios del productor (datos fiscales y catastrales) y
+        // adaptando las etiquetas de los campos comunes.
+        function selectRole(role) {
+            document.getElementById('role').value = role;
+            document.getElementById('card-client').classList.remove('active');
+            document.getElementById('card-producer').classList.remove('active');
+            document.getElementById('card-' + role).classList.add('active');
+
+            document.getElementById('producer-fields').style.display = (role === 'producer') ? 'block' : 'none';
+
+            const nameInput = document.getElementById('name');
+            if (role === 'producer') {
+                document.getElementById('farmNameGroup').style.display = 'block';
+                document.getElementById('nameLabel').innerText = 'Nombre del titular';
+                nameInput.placeholder = 'Ej: María';
+                document.getElementById('lastNameLabel').innerText = 'Apellidos del titular';
+            } else {
+                document.getElementById('farmNameGroup').style.display = 'none';
+                document.getElementById('nameLabel').innerText = 'Nombre / Razón Social';
+                nameInput.placeholder = 'Tu nombre';
+                document.getElementById('lastNameLabel').innerText = 'Apellidos';
+            }
+        }
+
+        // Gestiona el envío del formulario de registro: valida la coincidencia
+        // de contraseña y correo y el formato del correo antes de remitir los
+        // datos al servidor.
+        function handleRegister(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const confirmEmail = document.getElementById('confirmEmail').value;
+            const name = document.getElementById('name').value;
+            const lastName = document.getElementById('lastName').value;
+            const role = document.getElementById('role').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                document.getElementById('passwordError').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('passwordError').style.display = 'none';
+            }
+
+            if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email) || email !== confirmEmail) {
+                document.getElementById('emailError').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('emailError').style.display = 'none';
+            }
+
+            let finalPhone = '';
+            if (role === 'producer') {
+                if (!document.getElementById('farmName').value.trim()) {
+                    alert('Indica el nombre de tu granja / explotación.');
+                    document.getElementById('farmName').focus();
+                    return;
+                }
+                const idType = document.getElementById('idType').value;
+                const dniValue = document.getElementById('dni').value.toUpperCase();
+                let validId = false;
+
+                if (idType === 'DNI') {
+                    validId = /^\d{8}[A-Z]$/.test(dniValue);
+                } else if (idType === 'NIE') {
+                    validId = /^[XYZ]\d{7}[A-Z]$/.test(dniValue);
+                } else if (idType === 'CIF') {
+                    validId = /^[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]$/.test(dniValue);
+                }
+
+                if (!validId) {
+                    document.getElementById('dniError').style.display = 'block';
+                    return;
+                } else {
+                    document.getElementById('dniError').style.display = 'none';
+                }
+
+                const phone = document.getElementById('phone').value;
+                if (!/^\d{9}$/.test(phone)) {
+                    document.getElementById('phoneError').style.display = 'block';
+                    return;
+                } else {
+                    document.getElementById('phoneError').style.display = 'none';
+                }
+                finalPhone = document.getElementById('phonePrefix').value + ' ' + phone;
+            }
+
+            const farmName = role === 'producer' ? document.getElementById('farmName').value.trim() : '';
+            const payload = {
+                name: role === 'producer' ? farmName : name,
+                ownerName: role === 'producer' ? name : undefined,
+                lastName, email, role, password,
+                dni: document.getElementById('dni') ? document.getElementById('idType').value + ' ' + document.getElementById('dni').value.toUpperCase() : '',
+                catastral: document.getElementById('catastral') ? document.getElementById('catastral').value : '',
+                address: document.getElementById('address') ? document.getElementById('address').value : '',
+                phone: finalPhone
+            };
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        if (data.message && data.message.includes('Referencia') || data.message.includes('Catastral') || data.message.includes('catastral')) {
+                            const ce = document.getElementById('catastralError');
+                            if (ce) {
+                                ce.innerText = data.message;
+                                ce.style.display = 'block';
+                                document.getElementById('catastral').focus();
+                            } else {
+                                alert('Error: ' + data.message);
+                            }
+                        } else {
+                            alert('Error al registrarse: ' + data.message);
+                        }
+                        return;
+                    }
+                    const displayName = role === 'producer' ? farmName : name;
+                    localStorage.setItem('km0_user', JSON.stringify({ email: email, name: displayName, role: role }));
+                    if (role === 'producer') window.location.href = '/producer-app';
+                    else window.location.href = '/client-app';
+                })
+                .catch(err => {
+                    alert('Error de conexión con el servidor: ' + err.message);
+                });
+        }
+    </script>
+    <%- include('partials/footer') %>
+</body>
+
+</html>

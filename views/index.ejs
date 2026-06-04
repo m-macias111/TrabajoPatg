@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <%- include('partials/head') %>
+    <title>Kilómetro 0 | Tienda</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/css/store.css">
+</head>
+<body>
+    <div class="dashboard">
+        <div class="side-nav">
+            <div class="logo" onclick="window.location.href='/'" style="cursor:pointer;" title="Volver al inicio">
+                <i class="fa-solid fa-leaf"></i>
+                <span>Kilómetro 0</span>
+            </div>
+            
+            <div class="nav-item active" onclick="switchView('map-view', this)">
+                <i class="fa-solid fa-map-location-dot"></i> Vista Mapa
+            </div>
+            <div class="nav-item" onclick="switchView('products-view', this)">
+                <i class="fa-solid fa-boxes-stacked"></i> Ver Productos
+            </div>
+            <div class="nav-item" onclick="window.location.href='/about'">
+                <i class="fa-solid fa-circle-info"></i> Información
+            </div>
+            <div style="margin-top:auto; font-size:0.75rem; color:rgba(255,255,255,0.5); text-align:center; padding-top:2rem;">
+                &copy; 2026 Kilómetro 0
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <div style="display:flex; flex-direction:column; gap:10px; flex:1; margin-right:2rem;">
+                    <div style="display:flex; width:100%; gap:10px;">
+                        <input type="text" id="globalSearch" placeholder="Buscar productos en tienda..." style="flex:1; padding:10px; border:none; border-radius:8px; font-family:'Inter'; outline:none;">
+                        <button class="btn" style="background:white; color:#1a7a3a; font-weight:700; border:none; padding:0.5rem 1rem; border-radius:8px;" onclick="applyFilters()"><i class="fa-solid fa-search"></i> Buscar</button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <button class="btn" id="locationBtn" onclick="getUserLocation()" style="white-space:nowrap; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); padding:0.4rem 0.8rem; border-radius:8px; font-weight:600; font-size:0.85rem;"><i class="fa-solid fa-location-crosshairs"></i> Mi Ubicación</button>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="useDistanceFilter" onchange="updateDistanceCircle(); applyFilters();" style="accent-color:#8fff8f;">
+                            <label for="useDistanceFilter" style="white-space:nowrap; font-weight:bold; font-size:0.85rem; color:white; cursor:pointer;">Limitar área</label>
+                        </div>
+                        <label for="distanceFilter" style="white-space:nowrap; font-weight:bold; font-size:0.85rem; color:white; margin-left:10px;">Radio: <span id="distanceValue">700</span> km</label>
+                        <input type="range" id="distanceFilter" min="1" max="700" step="1" value="700" style="flex:1; accent-color:#8fff8f;" oninput="document.getElementById('distanceValue').innerText=this.value; document.getElementById('useDistanceFilter').checked=true; updateDistanceCircle(); applyFilters();">
+                    </div>
+                </div>
+                
+                <div style="display:flex; gap:1.5rem; align-items:center;">
+                    <button class="btn" onclick="toggleCart()" style="border-radius: 50%; width: 45px; height: 45px; padding: 0; position: relative; background:white; color:#1a7a3a; border:none;">
+                        <i class="fa-solid fa-basket-shopping"></i>
+                        <span id="cartBadge" style="position:absolute; top:-5px; right:-5px; background:#ff6b35; color:white; border-radius:50%; width:20px; height:20px; font-size:0.7rem; display:flex; align-items:center; justify-content:center;">0</span>
+                    </button>
+                    
+                    <div id="authContainer" style="display:flex; gap:0.5rem; align-items:center;">
+                        <a href="/login" class="btn" style="padding: 0.5rem 1rem; background:white; color:#1a7a3a; font-weight:700; border:none; border-radius:8px;">Entrar</a>
+                        <a href="/register" class="btn" style="padding: 0.5rem 1rem; background:rgba(255,255,255,0.2); color:white; font-weight:700; border:1px solid rgba(255,255,255,0.4); border-radius:8px;">Registrarse</a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map-view" class="view-panel active">
+                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                    <span style="font-weight:700; font-size:0.9rem; white-space:nowrap;"><i class="fa-solid fa-filter"></i> Filtrar mapa:</span>
+                    <select id="mapCategoryFilter" onchange="applyFilters()" style="padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-family:'Inter'; font-size:0.9rem;">
+                        <option value="Todas">Todas las categorías</option>
+                        <option value="Verduras">🥬 Verduras</option>
+                        <option value="Frutas">🍊 Frutas</option>
+                        <option value="Carnes">🥩 Carnes</option>
+                        <option value="Lácteos">🧀 Lácteos</option>
+                        <option value="Miel">🍯 Miel</option>
+                        <option value="Bebidas">🍷 Bebidas</option>
+                        <option value="Otros">📦 Otros</option>
+                    </select>
+                    <input type="text" id="mapSearch" placeholder="Buscar producto en mapa..." oninput="applyFilters()" style="flex:1; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-family:'Inter'; font-size:0.9rem;">
+                </div>
+                <div class="map-frame">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div id="products-view" class="view-panel">
+                <h2 style="margin-bottom: 1rem;">Nuestra Despensa</h2>
+                <div style="display:flex; gap:10px; margin-bottom:1rem; overflow-x:auto; padding-bottom:5px;">
+                    <button class="btn btn-primary" onclick="filterCategory('Todas')">Todas</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Verduras')">Verduras</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Frutas')">Frutas</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Carnes')">Carnes</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Lácteos')">Lácteos</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Miel')">Miel</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Bebidas')">Bebidas</button>
+                    <button class="btn btn-outline" onclick="filterCategory('Otros')">Otros</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem; background:#f9f9f9; padding:10px 14px; border-radius:10px; flex-wrap:wrap;">
+                    <span style="font-weight:700; font-size:0.85rem; white-space:nowrap; color:#555;"><i class="fa-solid fa-tag"></i> Precio:</span>
+                    <span style="font-size:0.85rem; color:#555;">0€</span>
+                    <input type="range" id="priceFilter" min="0" max="200" step="1" value="200" style="flex:1; min-width:100px; accent-color:#1a7a3a;" oninput="document.getElementById('priceValue').innerText=this.value; applyFilters();">
+                    <span style="font-size:0.85rem; color:#555; white-space:nowrap;">Hasta <b id="priceValue">200</b>€</span>
+                </div>
+                <div class="products-grid" id="productsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-backdrop" onclick="toggleCart()"></div>
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h2><i class="fa-solid fa-basket-shopping"></i> Tu Cesta</h2>
+            <i class="fa-solid fa-xmark" style="font-size: 1.5rem; cursor:pointer;" onclick="toggleCart()"></i>
+        </div>
+        <div class="cart-body" id="cartItems">
+            <p style="color: gray;">Tu cesta está vacía.</p>
+        </div>
+        <div class="cart-footer" id="cartFooter">
+            <h3 style="display: flex; justify-content: space-between; margin-bottom: 1rem;">Total: <span id="cartTotal">0.00€</span></h3>
+            <button class="btn btn-primary" style="width: 100%;" onclick="showCheckoutConfirm()">Tramitar Reserva</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4000; display:none; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
+        <div style="background:white; padding:2rem; border-radius:16px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
+            <h2 style="margin-bottom:0.5rem;"><i class="fa-solid fa-clipboard-check" style="color:var(--primary);"></i> Confirmar Reserva</h2>
+            <p style="color:gray; font-size:0.9rem; margin-bottom:1.5rem;">Revisa tu pedido antes de confirmar.</p>
+            <div id="confirmItems"></div>
+            <div style="background:#f0fff0; border-radius:10px; padding:1rem; margin-top:1rem;">
+                <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:800; color:var(--primary);">
+                    <span>Total</span><span id="confirmTotal"></span>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+                <button class="btn btn-outline" style="flex:1;" onclick="closeConfirmModal()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+                <button class="btn btn-primary" style="flex:2;" id="confirmBtn" onclick="checkout()"><i class="fa-solid fa-paper-plane"></i> Confirmar y Tramitar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" style="position:fixed; bottom:-100px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:12px 24px; border-radius:30px; font-weight:600; box-shadow:0 5px 15px rgba(0,0,0,0.2); transition:bottom 0.4s; z-index:9999;"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // === DATOS ===
+        // El servidor serializa el catálogo y los productores en el HTML para
+        // disponer de ellos en cliente sin una petición adicional.
+        const productsData = <%- JSON.stringify(products) %>;
+        const producersData = <%- JSON.stringify(producers) %>;
+        const geoserverWmsUrl = '<%- (locals.geoserverPublicUrl || locals.geoserverUrl || "http://localhost:8080/geoserver") %>/wms';
+        const geoserverProvinciasLayer = '<%- (locals.geoserverProvincesWorkspace || "gggggggggg") %>:provincias';
+
+        // === SESIÓN Y AUTENTICACIÓN ===
+        const userStr = localStorage.getItem('km0_user');
+        let currentUser = null;
+        let userFavorites = new Set();
+
+        if(userStr) {
+            currentUser = JSON.parse(userStr);
+            const dashboardUrl = currentUser.role === 'admin' ? '/admin-app' : currentUser.role === 'producer' ? '/producer-app' : '/client-app';
+            const icon = currentUser.role === 'producer' ? 'fa-tractor' : currentUser.role === 'admin' ? 'fa-shield-halved' : 'fa-circle-user';
+            document.getElementById('authContainer').innerHTML = `
+                <a href="${dashboardUrl}" title="Ir a mi perfil" style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; padding:0.4rem 0.8rem; border-radius:30px; background:rgba(255,255,255,0.15); text-decoration:none; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <div id="navAvatar" style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
+                        <i class="fa-solid ${icon}" style="font-size:0.8rem; color:white;"></i>
+                    </div>
+                    <span style="font-weight:600; color:white; font-size:0.9rem;">${currentUser.name}</span>
+                </a>
+                <button onclick="logout()" style="background:#e74c3c; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; font-size:0.9rem; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>`;
+            // Carga asíncrona de la foto de perfil en el avatar de la barra de navegación.
+            fetch('/api/me').then(r => r.json()).then(data => {
+                if (data.success && data.user && data.user.profileImage) {
+                    const av = document.getElementById('navAvatar');
+                    if (av) av.innerHTML = `<img src="${data.user.profileImage}" alt="perfil" style="width:100%; height:100%; object-fit:cover;">`;
+                }
+            }).catch(() => {});
+            if(currentUser.role === 'client') {
+                fetch('/api/favorites').then(r => {
+                    if (r.status === 403) {
+                        localStorage.removeItem('km0_user');
+                        window.location.reload();
+                        return null;
+                    }
+                    return r.json();
+                }).then(data => {
+                    if(data && data.favorites) {
+                        data.favorites.forEach(f => userFavorites.add(f.id));
+                        applyFilters();
+                    }
+                }).catch(() => {});
+            }
+        }
+        // Cierra la sesión: invalida la cookie en el servidor, elimina los datos
+        // del usuario del almacenamiento local y recarga la página.
+        function logout() {
+            fetch('/api/logout', { method: 'POST' }).then(() => {
+                localStorage.removeItem('km0_user');
+                localStorage.removeItem('km0_cart');
+                window.location.reload();
+            });
+        }
+
+        // Alterna el estado de favorito de un producto. Requiere sesión de
+        // cliente; en caso contrario redirige al inicio de sesión. Actualiza el
+        // icono del botón según la acción confirmada por el servidor.
+        function toggleFavorite(productId, btn) {
+            if(!currentUser || currentUser.role !== 'client') {
+                window.location.href = '/login';
+                return;
+            }
+            fetch('/api/favorites/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId })
+            }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    if(data.action === 'added') {
+                        userFavorites.add(productId);
+                        btn.style.color = '#e74c3c';
+                        btn.title = 'Quitar de favoritos';
+                        btn.querySelector('i').className = 'fa-solid fa-heart';
+                    } else {
+                        userFavorites.delete(productId);
+                        btn.style.color = 'rgba(255,255,255,0.8)';
+                        btn.title = 'Guardar en favoritos';
+                        btn.querySelector('i').className = 'fa-regular fa-heart';
+                    }
+                }
+            });
+        }
+
+        // === UTILIDADES DE INTERFAZ ===
+        // Muestra una notificación emergente (toast) temporal en la parte
+        // inferior, con color verde para confirmaciones y rojo para errores.
+        function showToast(msg, isError=false) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.background = isError ? '#e74c3c' : '#2ecc71';
+            t.style.bottom = '20px';
+            setTimeout(() => t.style.bottom = '-100px', 3000);
+        }
+
+        // === NAVEGACIÓN SPA (mediante la History API) ===
+        // Conmuta entre paneles de la aplicación de página única sin recargar el
+        // documento, sincronizando el estado con el historial del navegador para
+        // que los botones de avance y retroceso funcionen.
+        function switchView(viewId, element) {
+            document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            if(element) element.classList.add('active');
+            if(viewId === 'map-view') setTimeout(() => map.invalidateSize(), 100);
+            
+            if(window.location.hash !== '#' + viewId) {
+                window.history.pushState(null, '', '#' + viewId);
+            }
+        }
+        
+        window.addEventListener('popstate', () => {
+            const hash = window.location.hash.replace('#', '') || 'map-view';
+            let navEl = null;
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if(n.getAttribute('onclick') && n.getAttribute('onclick').includes(hash)) navEl = n;
+            });
+            switchView(hash, navEl);
+        });
+
+        // === CARRITO (persistente, con cantidades) ===
+        // El carrito se conserva en localStorage como un array de objetos de
+        // producto, cada uno con su cantidad: [{ ...producto, qty: N }, ...].
+        let cart = JSON.parse(localStorage.getItem('km0_cart')) || [];
+        const sidebar = document.getElementById('cartSidebar');
+        const backdrop = document.querySelector('.cart-backdrop');
+
+        function toggleCart() { sidebar.classList.toggle('open'); backdrop.classList.toggle('open'); }
+
+        // Añade una unidad de un producto al carrito, validando previamente la
+        // disponibilidad de stock para no superar las existencias declaradas.
+        function addToCart(id) {
+            const product = productsData.find(p => p.id === id);
+            if (!product) return;
+            const hasStock = product.stock !== null && product.stock !== undefined;
+            if (hasStock && product.stock <= 0) return showToast(product.name + ' está agotado', true);
+            const existing = cart.find(c => c.id === id);
+            const currentQty = existing ? (existing.qty || 1) : 0;
+            if (hasStock && currentQty + 1 > product.stock) {
+                return showToast('Solo quedan ' + product.stock + ' unidad(es) de ' + product.name, true);
+            }
+            if (existing) {
+                existing.qty = currentQty + 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+            localStorage.setItem('km0_cart', JSON.stringify(cart));
+            updateCartUI();
+            showToast('Producto añadido a la cesta');
+        }
+
+        // Modifica la cantidad de una línea del carrito en la magnitud `delta`.
+        // Respeta el límite de stock al incrementar y elimina la línea si la
+        // cantidad resultante es cero o negativa.
+        function changeQty(id, delta) {
+            const item = cart.find(c => c.id === id);
+            if (!item) return;
+            const product = productsData.find(p => p.id === id);
+            const hasStock = product && product.stock !== null && product.stock !== undefined;
+            const newQty = (item.qty || 1) + delta;
+            if (delta > 0 && hasStock && newQty > product.stock) {
+                return showToast('Solo quedan ' + product.stock + ' unidad(es) de ' + item.name, true);
+            }
+            item.qty = newQty;
+            if (item.qty <= 0) cart = cart.filter(c => c.id !== id);
+            localStorage.setItem('km0_cart', JSON.stringify(cart));
+            updateCartUI();
+        }
+
+        // Vuelca el estado actual del carrito en la interfaz: contador del icono,
+        // líneas de detalle e importe total.
+        function updateCartUI() {
+            const totalItems = cart.reduce((s, p) => s + (p.qty || 1), 0);
+            document.getElementById('cartBadge').innerText = totalItems;
+            const body = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                body.innerHTML = '<p style="color:gray;">Tu cesta está vacía.</p>';
+                document.getElementById('cartTotal').innerText = '0.00€';
+                document.getElementById('cartFooter').style.display = '';
+            } else {
+                let html = '', total = 0;
+                cart.forEach(p => {
+                    const qty = p.qty || 1;
+                    const lineTotal = p.price * qty;
+                    total += lineTotal;
+                    html += `<div class="cart-item">
+                        <div style="flex:1;">
+                            <h4 style="margin:0 0 2px;">${p.name}</h4>
+                            <span style="font-size:0.8rem; color:gray;">${p.producer_name}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button onclick="changeQty(${p.id},-1)" style="background:#eee; border:none; border-radius:4px; width:24px; height:24px; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;">−</button>
+                            <span style="font-weight:700; min-width:16px; text-align:center;">${qty}</span>
+                            <button onclick="changeQty(${p.id},1)" style="background:#eee; border:none; border-radius:4px; width:24px; height:24px; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;">+</button>
+                        </div>
+                        <div style="font-weight:bold; color:var(--primary); margin-left:10px; min-width:54px; text-align:right;">${lineTotal.toFixed(2)}€</div>
+                    </div>`;
+                });
+                body.innerHTML = html;
+                document.getElementById('cartTotal').innerText = total.toFixed(2) + '€';
+            }
+        }
+
+        // Presenta el resumen del pedido (artículos e importe) en una ventana
+        // modal para que el usuario lo confirme antes de tramitarlo.
+        function showCheckoutConfirm() {
+            if (cart.length === 0) return showToast('La cesta está vacía', true);
+            const total = cart.reduce((s, p) => s + p.price * (p.qty || 1), 0);
+            const itemsHtml = cart.map(p => {
+                const qty = p.qty || 1;
+                return `<div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px dashed #eee; font-size:0.88rem;">
+                    <span><b>${p.name}</b> <span style="color:gray;">× ${qty}</span> <span style="color:#999; font-size:0.78rem;">· ${p.producer_name}</span></span>
+                    <span style="font-weight:700; color:var(--primary);">${(p.price * qty).toFixed(2)}€</span>
+                </div>`;
+            }).join('');
+            document.getElementById('confirmItems').innerHTML = itemsHtml;
+            document.getElementById('confirmTotal').innerText = total.toFixed(2) + '€';
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        // Oculta la ventana modal de confirmación del pedido.
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        // Inicia el proceso de compra. Si hay sesión activa, tramita el pedido
+        // con el correo del usuario; si no, ofrece iniciar sesión o continuar
+        // como invitado introduciendo un correo de contacto.
+        function checkout() {
+            closeConfirmModal();
+            if (cart.length === 0) return showToast('La cesta está vacía', true);
+            const u = localStorage.getItem('km0_user');
+            if (u) {
+                processOrder(JSON.parse(u).email);
+            } else {
+                document.getElementById('cartItems').innerHTML = `
+                    <div style="padding:1rem 0;">
+                        <h3 style="margin-bottom:1rem;">¿Cómo quieres continuar?</h3>
+                        <a href="/login" class="btn btn-primary" style="width:100%; margin-bottom:0.8rem; display:block; text-align:center;"><i class="fa-solid fa-user"></i> Iniciar Sesión / Registrarme</a>
+                        <div style="text-align:center; color:gray; margin:1rem 0; font-weight:600;">— o comprar como invitado —</div>
+                        <div style="margin-bottom:0.8rem;"><label style="font-weight:600; display:block; margin-bottom:0.3rem;">Tu correo electrónico</label><input type="email" id="guestEmail" placeholder="tu@email.com" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:8px;"></div>
+                        <div style="margin-bottom:1rem;"><label style="font-weight:600; display:block; margin-bottom:0.3rem;">Repite tu correo</label><input type="email" id="guestEmailConfirm" placeholder="tu@email.com" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:8px;"></div>
+                        <small id="guestEmailError" style="color:red; display:none; margin-bottom:0.5rem;">Los correos no coinciden o el formato es inválido.</small>
+                        <button class="btn btn-primary" style="width:100%;" onclick="submitGuestOrder()"><i class="fa-solid fa-paper-plane"></i> Confirmar como Invitado</button>
+                        <button class="btn btn-outline" style="width:100%; margin-top:0.5rem;" onclick="updateCartUI()"><i class="fa-solid fa-arrow-left"></i> Volver a la cesta</button>
+                    </div>`;
+                document.getElementById('cartFooter').style.display = 'none';
+            }
+        }
+
+        // Valida el correo introducido por un comprador invitado (coincidencia
+        // de ambos campos y formato correcto) antes de tramitar el pedido.
+        function submitGuestOrder() {
+            const email = document.getElementById('guestEmail').value;
+            const emailConfirm = document.getElementById('guestEmailConfirm').value;
+            if (!email || email !== emailConfirm || !/^[^@]+@[^@]+\.[a-zA-Z]{2,}$/.test(email)) {
+                document.getElementById('guestEmailError').style.display = 'block';
+                return;
+            }
+            processOrder(email);
+        }
+
+        // Envía el pedido al servidor y gestiona la respuesta: ante un conflicto
+        // de stock, ajusta las existencias mostradas; si tiene éxito, presenta el
+        // justificante con el código QR generado en el navegador y vacía el carrito.
+        function processOrder(client_email) {
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: cart, client_email })
+            }).then(r => r.json()).then(data => {
+                if (!data.success) {
+                    showToast(data.message || 'No se pudo tramitar el pedido', true);
+                    if (data.product_id) {
+                        const prod = productsData.find(p => p.id === data.product_id);
+                        if (prod && data.available !== undefined) prod.stock = data.available;
+                        updateCartUI();
+                    }
+                    return;
+                }
+                const qrPayload = data.qr_payload;
+                const total = cart.reduce((s, p) => s + p.price * (p.qty || 1), 0);
+                const itemsHtml = cart.map(p => {
+                    const qty = p.qty || 1;
+                    return `<div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px dashed #eee; font-size:0.85rem;">
+                        <span><b>${p.name}</b> × ${qty} <span style="color:gray;">· ${p.producer_name}</span></span>
+                        <span style="font-weight:700; color:var(--primary);">${(p.price * qty).toFixed(2)}€</span>
+                    </div>`;
+                }).join('');
+
+                const emailNote = data.emailPreviewUrl
+                    ? `<div style="background:#fff3cd; padding:12px; border-radius:8px; margin-top:1rem; border:1px solid #ffc107;">
+                        <p style="margin:0; font-size:0.85rem; color:#856404;"><i class="fa-solid fa-flask"></i> <b>Modo de pruebas:</b> <a href="${data.emailPreviewUrl}" target="_blank" style="color:#856404; font-weight:700;">Ver email de confirmación</a></p>
+                       </div>`
+                    : `<p style="margin-top:1rem; font-size:0.85rem; color:gray;"><i class="fa-solid fa-check-circle" style="color:var(--primary);"></i> Email enviado a <b>${client_email}</b></p>`;
+
+                document.getElementById('cartItems').innerHTML = `
+                    <div style="padding:1.5rem 0;">
+                        <div style="text-align:center; margin-bottom:1.5rem;">
+                            <i class="fa-solid fa-circle-check" style="font-size:3rem; color:var(--primary); margin-bottom:0.5rem;"></i>
+                            <h2 style="margin:0.3rem 0;">¡Reserva Confirmada!</h2>
+                        </div>
+                        <div style="display:flex; justify-content:center; margin:1rem 0;"><div id="qrcode-container" style="padding:12px; background:white; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.05); display:inline-block;"></div></div>
+                        <div style="background:#f9f9f9; border-radius:10px; padding:1rem; font-size:0.85rem; margin-bottom:1rem;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                                <span style="color:gray;"><i class="fa-solid fa-hashtag"></i> Referencia</span>
+                                <span style="font-weight:700; font-family:monospace;">${data.qr_code}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.8rem;">
+                                <span style="color:gray;"><i class="fa-solid fa-user"></i> Cliente</span>
+                                <span style="font-weight:600;">${client_email}</span>
+                            </div>
+                            <div style="border-top:1px solid #eee; padding-top:0.8rem;">
+                                <p style="margin:0 0 0.5rem; font-weight:600; color:#333;"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> Artículos</p>
+                                ${itemsHtml}
+                                <div style="display:flex; justify-content:space-between; padding-top:0.6rem; font-size:0.95rem;">
+                                    <span style="font-weight:700;">Total</span>
+                                    <span style="font-weight:800; color:var(--primary);">${total.toFixed(2)}€</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${emailNote}
+                    </div>`;
+                document.getElementById('cartFooter').style.display = 'none';
+                cart = [];
+                localStorage.removeItem('km0_cart');
+                document.getElementById('cartBadge').innerText = '0';
+                if (qrPayload) {
+                    setTimeout(() => {
+                        const qrEl = document.getElementById('qrcode-container');
+                        if (qrEl) new QRCode(qrEl, { text: qrPayload, width: 160, height: 160, colorDark: '#1a7a3a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+                    }, 50);
+                }
+            }).catch(err => {
+                showToast('Error al tramitar el pedido: ' + err.message, true);
+            });
+        }
+
+        // === MAPA Y GEOLOCALIZACIÓN ===
+        // Coordenadas iniciales centradas en Madrid mientras no se conoce la
+        // ubicación real del usuario.
+        let userLat = 40.4168, userLng = -3.7038, hasUserLocation = false, userMarker = null, distanceCircle = null;
+        const map = L.map('map').setView([userLat, userLng], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Panes personalizados para controlar el orden Z de las capas.
+        // Los marcadores (markerPane) tienen z-index 600 por defecto → siempre encima.
+        map.createPane('pnoa');
+        map.getPane('pnoa').style.zIndex = 201;   // justo encima del tilePane (200)
+        map.createPane('provinces');
+        map.getPane('provinces').style.zIndex = 250; // entre PNOA y los marcadores
+
+        const pnoaLayer = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
+            layers: 'OI.OrthoimageCoverage',
+            format: 'image/jpeg',
+            transparent: false,
+            version: '1.3.0',
+            opacity: 0.75,
+            attribution: '© Instituto Geográfico Nacional de España',
+            pane: 'pnoa'
+        });
+
+        let provincesLayer = null;   // se carga bajo demanda desde /api/provincias
+
+        // Dibuja (o actualiza) sobre el mapa un círculo centrado en la ubicación
+        // del usuario cuyo radio representa la distancia máxima de búsqueda
+        // seleccionada. Lo retira si el filtro por distancia está desactivado.
+        function updateDistanceCircle() {
+            if (!hasUserLocation) return;
+            const useFilter = document.getElementById('useDistanceFilter').checked;
+            const km = parseInt(document.getElementById('distanceFilter').value);
+            
+            if (!useFilter) {
+                if (distanceCircle) map.removeLayer(distanceCircle);
+                return;
+            }
+
+            if (distanceCircle) {
+                distanceCircle.setLatLng([userLat, userLng]).setRadius(km * 1000);
+                if (!map.hasLayer(distanceCircle)) distanceCircle.addTo(map);
+            } else {
+                distanceCircle = L.circle([userLat, userLng], {
+                    radius: km * 1000,
+                    color: '#1a7a3a',
+                    fillColor: '#2ecc71',
+                    fillOpacity: 0.08,
+                    weight: 2,
+                    dashArray: '6 4'
+                }).addTo(map);
+            }
+        }
+
+        // Asociación entre cada categoría de producto y el color del marcador con
+        // que se representa en el mapa.
+        const categoryColors = {
+            'Verduras': 'green',
+            'Frutas': 'orange',
+            'Carnes': 'red',
+            'Lácteos': 'yellow',
+            'Miel': 'gold',
+            'Bebidas': 'violet',
+            'Otros': 'grey'
+        };
+
+        // Determina la categoría predominante de un productor como aquella con
+        // mayor número de productos en su catálogo, para colorear su marcador.
+        function getProducerMainCategory(producerId) {
+            const prods = productsData.filter(p => p.producer_id === producerId);
+            if (!prods.length) return 'Otros';
+            const counts = {};
+            prods.forEach(p => { counts[p.category] = (counts[p.category] || 0) + 1; });
+            return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+        }
+
+        // Construye el icono de marcador de Leaflet correspondiente al color de
+        // la categoría indicada.
+        function makeCategoryIcon(category) {
+            const color = categoryColors[category] || 'grey';
+            return L.icon({
+                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            });
+        }
+
+        // Leyenda del mapa que relaciona cada color de marcador con su categoría.
+        const mapLegend = L.control({ position: 'bottomleft' });
+        mapLegend.onAdd = function() {
+            const div = L.DomUtil.create('div');
+            div.style.cssText = 'background:white;padding:10px 14px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.15);font-family:Inter,sans-serif;font-size:0.78rem;line-height:1.8;';
+            div.innerHTML = '<strong style="display:block;margin-bottom:4px;font-size:0.82rem;">Tipo de producto</strong>' +
+                Object.entries(categoryColors).map(([cat, color]) =>
+                    `<div style="display:flex;align-items:center;gap:6px;"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="height:14px;width:auto;"> ${cat}</div>`
+                ).join('');
+            return div;
+        };
+        mapLegend.addTo(map);
+
+        // Panel de selección de capas (top-right del mapa)
+        const layerControlPanel = L.control({ position: 'topright' });
+        layerControlPanel.onAdd = function() {
+            const div = L.DomUtil.create('div');
+            div.style.cssText = 'background:white;padding:10px 14px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.15);font-family:Inter,sans-serif;font-size:0.82rem;min-width:175px;';
+            div.innerHTML = `
+                <strong style="display:block;margin-bottom:8px;font-size:0.85rem;color:#333;">
+                    <i class="fa-solid fa-layer-group" style="color:#1a7a3a;margin-right:4px;"></i> Capas del mapa
+                </strong>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none;">
+                    <input type="checkbox" id="pnoaCheck" style="accent-color:#1a7a3a;width:14px;height:14px;cursor:pointer;">
+                    <span>Ortofoto PNOA</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+                    <input type="checkbox" id="provincesCheck" style="accent-color:#1a7a3a;width:14px;height:14px;cursor:pointer;">
+                    <span>Límites provinciales</span>
+                </label>`;
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.disableScrollPropagation(div);
+            return div;
+        };
+        layerControlPanel.addTo(map);
+
+        document.getElementById('pnoaCheck').addEventListener('change', function() {
+            if (this.checked) pnoaLayer.addTo(map); else map.removeLayer(pnoaLayer);
+        });
+        document.getElementById('provincesCheck').addEventListener('change', async function() {
+            if (this.checked) {
+                if (!provincesLayer) {
+                    try {
+                        const resp = await fetch('/api/provincias');
+                        const data = await resp.json();
+                        provincesLayer = L.geoJSON(data, {
+                            style: { color: '#8b0000', weight: 1.5, fillOpacity: 0, opacity: 0.8 },
+                            pane: 'provinces'
+                        });
+                    } catch(e) {
+                        console.error('Error cargando provincias:', e);
+                        document.getElementById('provincesCheck').checked = false;
+                        return;
+                    }
+                }
+                provincesLayer.addTo(map);
+            } else {
+                if (provincesLayer) map.removeLayer(provincesLayer);
+            }
+        });
+
+        // Obtiene la ubicación del usuario mediante la API de geolocalización del
+        // navegador, centra el mapa en ella, coloca un marcador y reaplica los
+        // filtros dependientes de la distancia.
+        function getUserLocation() {
+            if (!navigator.geolocation) return showToast('Tu navegador no soporta geolocalización.', true);
+            navigator.geolocation.getCurrentPosition(pos => {
+                userLat = pos.coords.latitude;
+                userLng = pos.coords.longitude;
+                hasUserLocation = true;
+                map.setView([userLat, userLng], 9);
+                if(userMarker) map.removeLayer(userMarker);
+                userMarker = L.marker([userLat, userLng], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                    })
+                }).addTo(map).bindPopup('<b>Tu ubicación actual</b>').openPopup();
+                document.getElementById('locationBtn').style.background = 'rgba(255,255,255,0.35)';
+                updateDistanceCircle();
+                applyFilters();
+            }, () => showToast('No se pudo obtener la ubicación.', true));
+        }
+
+        // Calcula la distancia en kilómetros entre dos coordenadas geográficas
+        // aplicando la fórmula del haversine sobre una Tierra esférica de radio
+        // 6371 km. Precisión suficiente para el filtrado por proximidad.
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // === PARCELAS CATASTRALES ===
+        // Capa de polígonos con la huella de cada parcela, obtenida de GeoServer
+        // a través del proxy /api/parcels. Se indexan por id de productor para
+        // poder mostrar/ocultar cada polígono en sincronía con los marcadores.
+        const parcelLayerGroup = L.layerGroup().addTo(map);
+        let parcelsByProducer = {};
+
+        const parcelStyle = {
+            color: '#1a7a3a', weight: 2, fillColor: '#2ecc71', fillOpacity: 0.18, dashArray: '4 3'
+        };
+
+        // Carga las huellas de las parcelas y las dibuja según el filtro vigente.
+        function loadParcels() {
+            fetch('/api/parcels')
+                .then(r => r.json())
+                .then(fc => {
+                    parcelsByProducer = {};
+                    (fc.features || []).forEach(f => {
+                        const pid = f.properties && f.properties.producerId;
+                        if (pid == null) return;
+                        (parcelsByProducer[pid] = parcelsByProducer[pid] || []).push(f);
+                    });
+                    applyFilters();
+                })
+                .catch(() => { /* sin parcelas: el mapa sigue funcionando con marcadores */ });
+        }
+
+        // Dibuja los polígonos de los productores incluidos en el filtro actual,
+        // enlazando cada uno con el perfil del productor correspondiente.
+        function renderParcels(filteredProducers) {
+            parcelLayerGroup.clearLayers();
+            filteredProducers.forEach(p => {
+                if (!p.verified) return;
+                const feats = parcelsByProducer[p.id];
+                if (!feats || !feats.length) return;
+                L.geoJSON(feats, { style: parcelStyle })
+                    .bindPopup(`<div style="font-family:Inter,sans-serif;"><b>${p.name}</b><br><span style="font-size:0.78rem;color:gray;">Parcela catastral</span><br><a href="/producer-profile?id=${p.id}" style="color:#1a7a3a;font-weight:600;">Ver perfil</a></div>`)
+                    .addTo(parcelLayerGroup);
+            });
+        }
+
+        const markers = [];
+        // Redibuja los marcadores del mapa a partir del conjunto de productores
+        // filtrado: elimina los anteriores y crea uno nuevo por cada productor
+        // verificado con coordenadas válidas, con su ventana emergente asociada.
+        function renderMarkers(filteredProducers) {
+            renderParcels(filteredProducers);
+            markers.forEach(m => map.removeLayer(m));
+            markers.length = 0;
+            filteredProducers.forEach(p => {
+                if(!p.verified) return;
+                if(!p.lat || !p.lng || isNaN(p.lat) || isNaN(p.lng)) return;
+                const mainCategory = getProducerMainCategory(p.id);
+                const icon = makeCategoryIcon(mainCategory);
+                const prods = productsData.filter(pr => pr.producer_id === p.id).slice(0, 2);
+                const prodsHtml = prods.map(pr => `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;"><img src="${pr.image_url}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;"><span style="font-size:0.75rem;">${pr.name.substring(0,22)} <b>${pr.price.toFixed(2)}€</b></span></div>`).join('');
+                const img = p.profileImage ? `<img src="${p.profileImage}" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px;">` : '';
+                // Solo coordenadas: con la API de Maps esto coloca un pin exacto
+                // en el punto. Mezclar el nombre de la localidad en la búsqueda
+                // hacía que Google geocodificara el texto y se desviara del sitio.
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+                const localityHtml = p.locality
+                    ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="font-size:0.8rem;color:#1a7a3a;text-decoration:none;font-weight:600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Abrir en Google Maps"><i class="fa-solid fa-location-dot"></i> ${p.locality}</a>`
+                    : `<span style="font-size:0.8rem;color:gray;">Ubicación no disponible</span>`;
+                const m = L.marker([p.lat, p.lng], { icon }).addTo(map);
+                m.bindPopup(`<div style="width:200px;font-family:Inter,sans-serif;">${img}<b style="font-size:0.95rem;">${p.name}</b><br>${localityHtml}<br><span style="font-size:0.72rem;background:${categoryColors[mainCategory]||'grey'};color:white;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:3px;">${mainCategory}</span>${prodsHtml}<a href="/producer-profile?id=${p.id}" style="display:block;text-align:center;margin-top:8px;background:#2ecc71;color:white;padding:6px;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.85rem;">Ver Perfil y Productos</a></div>`, { maxWidth: 220 });
+                markers.push(m);
+            });
+        }
+
+        // === CUADRÍCULA DE PRODUCTOS ===
+        // Renderiza la cuadrícula de tarjetas de producto, incluyendo el
+        // distintivo de stock (agotado o pocas unidades) y el estado de favorito.
+        function renderProductsGrid(products) {
+            const grid = document.getElementById('productsGrid');
+            if (products.length === 0) {
+                grid.innerHTML = '<p style="color:gray; grid-column:1/-1; text-align:center; padding:3rem;">No se encontraron productos con estos filtros.</p>';
+                return;
+            }
+            grid.innerHTML = products.map(p => {
+                const isFav = userFavorites.has(p.id);
+                const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0;
+                const stockBadge = p.stock !== null && p.stock !== undefined
+                    ? (outOfStock
+                        ? `<span style="position:absolute; top:50px; left:12px; background:#e74c3c; color:white; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:700;">AGOTADO</span>`
+                        : (p.stock <= 5 ? `<span style="position:absolute; top:50px; left:12px; background:#f39c12; color:white; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:700;">Quedan ${p.stock}</span>` : ''))
+                    : '';
+                return `
+                <div class="produce-card" style="${outOfStock ? 'opacity:0.75;' : ''}">
+                    <span class="card-badge">${p.category}</span>
+                    <span class="card-price">${p.price.toFixed(2)}€</span>
+                    ${stockBadge}
+                    <button onclick="toggleFavorite(${p.id}, this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}"
+                        style="position:absolute; top:50px; right:12px; background:rgba(0,0,0,0.5); border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; color:${isFav ? '#e74c3c' : 'rgba(255,255,255,0.8)'}; z-index:10; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-${isFav ? 'solid' : 'regular'} fa-heart"></i>
+                    </button>
+                    <img src="${p.image_url}" alt="${p.name}">
+                    <div class="produce-info">
+                        <h4>${p.name}</h4>
+                        <span class="producer-link" onclick="window.location.href='/producer-profile?id=${p.producer_id}'"><i class="fa-solid fa-tractor"></i> ${p.producer_name}</span>
+                        <div class="pickup-tag"><i class="fa-solid fa-calendar-check"></i> Recogida: ${p.pickup_day}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; font-size:1.2rem; color:var(--primary);">${p.kg}kg</span>
+                            ${outOfStock
+                                ? `<button class="btn btn-outline" style="padding:0.5rem 1.2rem; font-weight:700; opacity:0.5; cursor:not-allowed;" disabled><i class="fa-solid fa-ban"></i> Agotado</button>`
+                                : `<button onclick="addToCart(${p.id})" class="btn btn-primary" style="padding:0.5rem 1.2rem; font-weight:700;"><i class="fa-solid fa-basket-shopping"></i> Comprar</button>`
+                            }
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // === FILTERS ===
+        let currentCategory = 'Todas';
+
+        // Fija la categoría activa, actualiza el estilo de los botones de filtro
+        // y reaplica el conjunto de filtros.
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('#products-view .btn').forEach(b => {
+                b.classList.toggle('btn-primary', b.innerText === category);
+                b.classList.toggle('btn-outline', b.innerText !== category);
+            });
+            applyFilters();
+        }
+
+        // Aplica de forma combinada todos los filtros activos (distancia,
+        // categoría, texto y precio) tanto a los marcadores del mapa como a la
+        // cuadrícula de productos, y vuelve a renderizar ambos.
+        function applyFilters() {
+            const text = document.getElementById('globalSearch').value.toLowerCase();
+            const maxDistance = parseInt(document.getElementById('distanceFilter').value);
+            const mapCategory = document.getElementById('mapCategoryFilter').value;
+            const mapSearch = document.getElementById('mapSearch').value.toLowerCase();
+            const maxPrice = parseInt(document.getElementById('priceFilter').value);
+
+            // Filtrado de productores por distancia a la ubicación del usuario.
+            let filteredProducers = producersData;
+            const useFilter = document.getElementById('useDistanceFilter').checked;
+            if (hasUserLocation && useFilter) {
+                filteredProducers = filteredProducers.filter(p => getDistance(userLat, userLng, p.lat, p.lng) <= maxDistance);
+            }
+
+            // Filtrado adicional de los marcadores por categoría y texto de búsqueda.
+            if (mapCategory !== 'Todas' || mapSearch) {
+                filteredProducers = filteredProducers.filter(p => {
+                    const prods = productsData.filter(pr => pr.producer_id === p.id);
+                    let match = prods;
+                    if (mapCategory !== 'Todas') match = match.filter(pr => pr.category === mapCategory);
+                    if (mapSearch) match = match.filter(pr => pr.name.toLowerCase().includes(mapSearch));
+                    return match.length > 0;
+                });
+            }
+            renderMarkers(filteredProducers);
+
+            // Filtrado de la cuadrícula de productos por proximidad, categoría,
+            // texto y precio máximo.
+            const allProducersInRange = (hasUserLocation && useFilter) ? producersData.filter(p => getDistance(userLat, userLng, p.lat, p.lng) <= maxDistance) : producersData;
+            const validIds = allProducersInRange.map(p => p.id);
+            let filtered = productsData.filter(p => validIds.includes(p.producer_id));
+            if (currentCategory !== 'Todas') filtered = filtered.filter(p => p.category === currentCategory);
+            if (text) filtered = filtered.filter(p => p.name.toLowerCase().includes(text) || p.producer_name.toLowerCase().includes(text));
+            filtered = filtered.filter(p => p.price <= maxPrice);
+            renderProductsGrid(filtered);
+        }
+
+        // === ESCUCHA DE LA BÚSQUEDA GLOBAL ===
+        // Reaplica los filtros conforme se teclea y, si la búsqueda es
+        // suficientemente específica desde el mapa, conmuta a la vista de productos.
+        document.getElementById('globalSearch').addEventListener('input', () => {
+            applyFilters();
+            if(document.getElementById('map-view').classList.contains('active') && document.getElementById('globalSearch').value.length > 2) {
+                switchView('products-view', document.querySelectorAll('.nav-item')[1]);
+            }
+        });
+
+        // === INICIALIZACIÓN ===
+        // Ajusta dinámicamente el tope del filtro de precio al precio máximo
+        // presente en el catálogo.
+        if (productsData.length > 0) {
+            const maxProductPrice = Math.ceil(Math.max(...productsData.map(p => p.price)));
+            const priceEl = document.getElementById('priceFilter');
+            priceEl.max = maxProductPrice;
+            priceEl.value = maxProductPrice;
+            document.getElementById('priceValue').innerText = maxProductPrice;
+        }
+
+        if(window.location.hash) {
+            const hash = window.location.hash.replace('#', '');
+            let navEl = null;
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if(n.getAttribute('onclick') && n.getAttribute('onclick').includes(hash)) navEl = n;
+            });
+            switchView(hash, navEl);
+        }
+
+        updateCartUI();
+        getUserLocation();
+        applyFilters();
+        loadParcels();
+    </script>
+    <%- include('partials/footer') %>
+</body>
+</html>

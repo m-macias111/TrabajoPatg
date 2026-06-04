@@ -1,0 +1,87 @@
+/* Estilos comunes para login, registro y recuperación de contraseña */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg-color);
+    padding: 2rem 0;
+}
+
+.auth-container {
+    background: white;
+    padding: 3rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+}
+
+.auth-container.register {
+    max-width: 500px;
+}
+
+.logo {
+    justify-content: center;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+    font-family: inherit;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: var(--primary);
+}
+
+/* Estilos específicos del registro */
+.role-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.role-card {
+    flex: 1;
+    padding: 1.5rem;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.role-card.active {
+    border-color: var(--primary);
+    background: rgba(46, 204, 113, 0.05);
+}
+
+.role-card i {
+    font-size: 2rem;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.role-card.active i {
+    color: var(--primary);
+}

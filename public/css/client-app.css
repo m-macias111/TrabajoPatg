@@ -1,0 +1,123 @@
+/* Estilos específicos de client-app.ejs */
+.order-card {
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: 0.3s;
+}
+
+.order-card:hover {
+    border-color: var(--primary);
+}
+
+.order-card .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.qr-display {
+    background: #f0fff0;
+    border: 2px dashed var(--primary);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #1a7a3a;
+    cursor: pointer;
+}
+
+.qr-display:hover {
+    background: #e0ffe0;
+}
+
+.fav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.fav-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    transition: 0.3s;
+    position: relative;
+}
+
+.fav-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.fav-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+}
+
+.fav-card .card-info {
+    padding: 1rem;
+}
+
+.fav-card .remove-fav {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    color: #e74c3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.fav-card .remove-fav:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+.profile-info {
+    background: rgba(46, 204, 113, 0.05);
+    border: 1px solid rgba(46, 204, 113, 0.2);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    border: 2px solid #ddd;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: 0.2s;
+}
+
+.filter-btn.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+}
