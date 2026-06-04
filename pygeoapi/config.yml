@@ -50,7 +50,10 @@ metadata:
         url: http://localhost:3000
     contact:
         name: Kilómetro 0
-        email: admin@km0local.es
+        email:
+            - m.macias@alumnos.upm.es
+            - n.ronchel@alumnos.upm.es
+        
 
 resources:
     catastro-parcela:
